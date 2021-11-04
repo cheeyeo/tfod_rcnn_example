@@ -10,7 +10,13 @@
 
 [Faster R-CNN Resnet101 V1 model]: http://download.tensorflow.org/models/object_detection/tf2/20200711/faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz
 
+
+[Original blog post on TFOD]: https://cheeyeo.uk/machine-learning/deep-learning/computer-vision/tensorflow/2021/11/03/using-tensorflow-object-detection-api/
+
+
 Apply fine-tuning to a trained Faster-RCNN object detection model via the TFOD API.
+
+[Original blog post on TFOD] with more detailed explanations.
 
 
 ### TFOD API
