@@ -141,6 +141,4 @@ cython_debug/
 # Custom ignores
 lisa
 models
-Makefile
-setup.sh
 NOTES.md
