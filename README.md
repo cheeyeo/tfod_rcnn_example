@@ -55,12 +55,7 @@ protoc object_detection/protos/*.proto --python_out=.
 
 cp object_detection/packages/tf2/setup.py .
 
-# Need to change dependency in setup.py to use 'tf-models-official==2.4.0'
-
 python -m pip install .
-
-# reinstall TF 2.4.0 as above would have installed TF 2.6.1
-pip install --upgrade --force-reinstall tensorflow==2.4.0
 
 # if no errors then it works...
 python object_detection/builders/model_builder_tf2_test.py
@@ -145,11 +140,6 @@ eval_input_reader: {
 	**config_file**: Name of config file within the model_dir.
 
 * Run `make train` which will start training process
-
-
-### Issues
-
-* If your TF version >= 2.4.0 it will throw a CUDNN mismatched error, in which case, downgrade the TF version. If not possible, create a dedicated venv and run the setup.py scripts again.
 
 
 ### TODO:
