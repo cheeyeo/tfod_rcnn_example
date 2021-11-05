@@ -133,17 +133,41 @@ eval_input_reader: {
 
 ```
 
-* Change back to current working dir of this project and run `source setup.sh <tfod_dir> <model_dir> <config_file>` where:
+* Create a `.env` file with following and source it:
 
+  ```
+  AWS_PROFILE: Name of aws_profile (optional)
+
+  AWS_ROOT: Path of aws credentials if running locally (optional)
+  
+  S3_DATA: Path to where training data stored (optional)
+  
+  LOCAL_DATA_PATH: Path to where training data held locally
+  
+  LOCAL_CONFIG_PATH: Path to training config file locally
+  ```
+
+
+### Running with docker
+
+* Create the docker image using the provided dockerfile
+
+* Run `make local-run` which will start training process using local paths defined in .env or `make ecs-run` which uses s3 dataset
+
+
+### Running manually
+
+* Change back to current working dir of this project and run `source setup.sh <tfod_dir> <model_dir> <model_export_dir> <config_file_name>` where:
+  ```
 	**tfod_dir**: Cloned models dir
 	**model_dir**: Dir where model's weights being extracted to
-	**config_file**: Name of config file within the model_dir.
+  **model_export_dir**: Dir to save trained model's weights
+	**config_file_name**: Name of config file within the model_dir.
+  ```
 
-* Run `make train` which will start training process
+* Run `make train` or `make export`
 
 
 ### TODO:
-
-* Automate process of downloading model's and setting up dirs
 
 * Automate process of training model in cloud as it uses too much GPU resources locally

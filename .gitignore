@@ -139,6 +139,8 @@ cython_debug/
 
 
 # Custom ignores
+.env
 lisa
 models
 NOTES.md
+test*.py
