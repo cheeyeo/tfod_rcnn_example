@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-#set -x
+set -x
 set -o pipefail
 
 # usage: source ./train.sh models lisa/experiments/training lisa/experiments/exported_model faster_rcnn_lisa.config <records path>
@@ -33,15 +33,25 @@ echo "Getting training data..."
 if [[ $training_data_path == *"s3"* ]]; then
 	echo "S3 FOUND!"
 
-	touch ${currentdir}/records/classes.pbtxt
-	touch ${currentdir}/records/training.record
-	touch ${currentdir}/records/testing.record
+	mkdir -p /tmp/records
+	mkfifo /tmp/records/classes.pbtxt
+	mkfifo /tmp/records/training.record
+	mkfifo /tmp/records/testing.record
 
-	aws s3 cp --cli-read-timeout 0 ${training_data_path}/classes.pbtxt - > ${currentdir}/records/classes.pbtxt
+	aws s3 cp --cli-read-timeout 0 ${training_data_path}/classes.pbtxt - > /tmp/records/classes.pbtxt &
 
-	aws s3 cp --cli-read-timeout 0 ${training_data_path}/training.record - > ${currentdir}/records/training.record
+	aws s3 cp --cli-read-timeout 0 ${training_data_path}/training.record - > /tmp/records/training.record &
 
-	aws s3 cp --cli-read-timeout 0 ${training_data_path}/testing.record - > ${currentdir}/records/testing.record
+	aws s3 cp --cli-read-timeout 0 ${training_data_path}/testing.record - > /tmp/records/testing.record &
+
+	python3 readfifo.py --input_dir /tmp/records --output "/opt/tfod/records"
+
+	echo "Waiting for named pipes to close..."
+	sleep 5
+	echo "Done"
+
+	echo "Removing named pipes"
+	rm -rf /tmp/records
 fi
 
 echo "Starting training process..."

@@ -29,7 +29,7 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 
 WORKDIR /opt/tfod
 
-COPY train.sh .
+COPY train.sh readfifo.py ./
 RUN chmod +x train.sh
 
 RUN git clone https://github.com/tensorflow/models.git && \

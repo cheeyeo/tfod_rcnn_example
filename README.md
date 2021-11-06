@@ -133,6 +133,10 @@ eval_input_reader: {
 
 ```
 
+### Running with docker
+
+* Create the docker image using the provided dockerfile
+
 * Create a `.env` file with following and source it:
 
   ```
@@ -146,11 +150,6 @@ eval_input_reader: {
   
   LOCAL_CONFIG_PATH: Path to training config file locally
   ```
-
-
-### Running with docker
-
-* Create the docker image using the provided dockerfile
 
 * Run `make local-run` which will start training process using local paths defined in .env or `make ecs-run` which uses s3 dataset
 
