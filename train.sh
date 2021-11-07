@@ -12,6 +12,7 @@ tfod_dir=${currentdir}/${1}
 model_dir=${currentdir}/${2}
 exported_dir=${currentdir}/${3}
 pipeline_config=${model_dir}/${4}
+pipeline_file=${4}
 training_data_path=${5}
 
 echo "Current dir is: ${currentdir}"
@@ -33,6 +34,9 @@ echo "Getting training data..."
 if [[ $training_data_path == *"s3"* ]]; then
 	echo "S3 FOUND!"
 
+	echo "Copying config file..."
+	aws s3 cp ${training_data_path}/${pipeline_file} ${pipeline_config}
+
 	mkdir -p /tmp/records
 	mkfifo /tmp/records/classes.pbtxt
 	mkfifo /tmp/records/training.record
@@ -53,6 +57,7 @@ if [[ $training_data_path == *"s3"* ]]; then
 	echo "Removing named pipes"
 	rm -rf /tmp/records
 fi
+
 
 echo "Starting training process..."
 python3 models/research/object_detection/model_main_tf2.py \
