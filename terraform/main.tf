@@ -281,6 +281,11 @@ resource "aws_instance" "ecs_instance" {
 
   subnet_id = module.vpc.private_subnets[0]
 
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 100
+  }
+
   user_data = data.template_cloudinit_config.config.rendered
 
   key_name = aws_key_pair.deployer.key_name
@@ -321,11 +326,17 @@ resource "aws_ecs_task_definition" "tfod_service" {
         }
       ],
       "command" : [
-          "models",
-          "experiments/training",
-          "experiments/exported_model",
-          "faster_rcnn_lisa_docker.config",
-          "s3://tfod"
+        "models",
+        "experiments/training",
+        "experiments/exported_model",
+        "s3://tfod",
+        "faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8",
+        tostring(var.num_classes),
+        tostring(var.min_dim),
+        tostring(var.max_dim),
+        tostring(var.num_steps),
+        tostring(var.batch_size),
+        tostring(var.num_examples)
       ],
       "logConfiguration" : {
         "logDriver" : "awslogs",
@@ -339,6 +350,46 @@ resource "aws_ecs_task_definition" "tfod_service" {
         {
           "sourceVolume" : "workdir",
           "containerPath" : "/opt/tfod",
+          "readOnly" : false
+        }
+      ]
+    },
+    {
+      "essential" : false,
+      "image" : "035663780217.dkr.ecr.eu-west-2.amazonaws.com/m1l0/artifactsv2:latest",
+      "name" : "backup",
+      "environment" : [
+        {
+          "name" : "M1L0_WORKING_DIR",
+          "value" : "/opt/tfod"
+        },
+        {
+          "name" : "M1L0_OUTPUT",
+          "value" : "s3://tfodbackup"
+        },
+        {
+          "name" : "M1L0_FAMILY",
+          "value" : "object-detector"
+        },
+        {
+          "name" : "M1L0_JOBID",
+          "value" : "12345"
+        },
+        {
+          "name" : "M1L0_REGION",
+          "value" : "eu-west-2"
+        }
+      ],
+      "mountPoints" : [
+        {
+          "sourceVolume" : "workdir",
+          "containerPath" : "/opt/tfod",
+          "readOnly" : false
+        }
+      ],
+      "volumesFrom" : [
+        {
+          "sourceContainer" : "${var.tfod_service_name}",
           "readOnly" : false
         }
       ]

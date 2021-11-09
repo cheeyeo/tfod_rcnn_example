@@ -92,18 +92,54 @@ variable "container_image" {
 
 variable "gpus" {
   description = "Number of gpus to use"
-  type = string
-  default = ""
+  type        = string
+  default     = "1"
 }
 
 variable "cpu" {
   description = "vCPU to use for task"
-  type = number
-  default = 256
+  type        = number
+  default     = 256
 }
 
 variable "memory" {
   description = "Memory to use for task"
-  type = number
-  default = 512
+  type        = number
+  default     = 512
+}
+
+variable "num_classes" {
+  description = "Number of categories for training"
+  type        = number
+  default     = 1
+}
+
+variable "min_dim" {
+  description = "Minimum dimension for input image"
+  type        = number
+  default     = 600
+}
+
+variable "max_dim" {
+  description = "Maximum dimension for input image"
+  type        = number
+  default     = 1024
+}
+
+variable "num_steps" {
+  description = "Num of training epochs"
+  type        = number
+  default     = 50000
+}
+
+variable "batch_size" {
+  description = "Training Batch size"
+  type        = number
+  default     = 1
+}
+
+variable "num_examples" {
+  description = "Num of samples for evaluation"
+  type        = number
+  default     = 1
 }

@@ -40,7 +40,7 @@ export RECORDS_DIR="${records_dir}"
 export PRETRAINED_MODEL_DIR="${pretrained_model_dir}"
 
 echo "Getting training data..."
-if [[ $training_data_path == *"s3"* ]]; then
+if [[ $records_dir == *"s3"* ]]; then
 	echo "S3 FOUND!"
 
 	mkdir -p /tmp/records
@@ -62,6 +62,8 @@ if [[ $training_data_path == *"s3"* ]]; then
 
 	echo "Removing named pipes"
 	rm -rf /tmp/records
+
+	export RECORDS_DIR="/opt/tfod/reords"
 fi
 
 echo "Generating config file for training..."
