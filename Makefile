@@ -1,10 +1,10 @@
 .PHONY: train export local-run ecs-run
 
 local-run:
-	docker run --gpus all --rm -v ${LOCAL_DATA_PATH}:/opt/tfod/records -v ${LOCAL_CONFIG_PATH}:/opt/tfod/experiments/training/faster_rcnn_lisa_docker.config m1l0/tfod:latest "models" "experiments/training" "experiments/exported_model" "faster_rcnn_lisa_docker.config"
+	docker run --gpus all --rm -v "${LOCAL_DATA_PATH}":/opt/tfod/records m1l0/tfod:latest "models" "experiments/training" "experiments/exported_model" "records" "faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8" 3 600 1024 50000 1 955
 
 ecs-run:
-	docker run --gpus all --rm -e AWS_PROFILE=${AWS_PROFILE} -v "${AWS_ROOT}":"/root/.aws:ro" -v "${LOCAL_CONFIG_PATH}":/opt/tfod/experiments/training/faster_rcnn_lisa_docker.config m1l0/tfod:latest "models" "experiments/training" "experiments/exported_model" "faster_rcnn_lisa_docker.config" ${S3_DATA}
+	docker run --gpus all --rm -e AWS_PROFILE=${AWS_PROFILE} -v "${AWS_ROOT}":"/root/.aws:ro" m1l0/tfod:latest "models" "experiments/training" "experiments/exported_model" ${S3_DATA} "faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8" 3 600 1024 50000 1 955
 
 train:
 	python models/research/object_detection/model_main_tf2.py \
