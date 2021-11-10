@@ -92,8 +92,8 @@ variable "container_image" {
 
 variable "gpus" {
   description = "Number of gpus to use"
-  type        = string
-  default     = "1"
+  type        = number
+  default     = 1
 }
 
 variable "cpu" {
@@ -142,4 +142,16 @@ variable "num_examples" {
   description = "Num of samples for evaluation"
   type        = number
   default     = 1
+}
+
+variable "backup_image" {
+  description = "Docker image name for backing up artifacts"
+  type        = string
+  default     = ""
+}
+
+variable "backup_bucket" {
+  description = "S3 Bucket to store artifacts"
+  type = string
+  default = ""
 }

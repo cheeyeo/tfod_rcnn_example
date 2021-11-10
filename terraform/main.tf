@@ -265,38 +265,8 @@ resource "aws_iam_role_policy_attachment" "service_ecs_task_role" {
   policy_arn = aws_iam_policy.service_ecs_task_role_policy.arn
 }
 
-## Provision EC2 Instance first
-resource "aws_instance" "ecs_instance" {
-  ami = data.aws_ami.amazon_ecs_linux_gpu.id
-
-  iam_instance_profile = "${var.tfod_service_name}-ecsInstanceProfile"
-
-  instance_type = var.instance_type
-
-  instance_initiated_shutdown_behavior = "terminate"
-
-  monitoring = false
-
-  security_groups = [module.vpc.default_security_group_id, module.ssh_private_vpc.security_group_id]
-
-  subnet_id = module.vpc.private_subnets[0]
-
-  root_block_device {
-    volume_type = "gp3"
-    volume_size = 100
-  }
-
-  user_data = data.template_cloudinit_config.config.rendered
-
-  key_name = aws_key_pair.deployer.key_name
-
-  tags = {
-    Name = "builder"
-  }
-}
-
 # Task definition for service
-resource "aws_ecs_task_definition" "tfod_service" {
+resource "aws_ecs_task_definition" "tfod_task_definition" {
   family                   = var.tfod_service_name
   network_mode             = "bridge"
   requires_compatibilities = ["EC2"]
@@ -322,7 +292,7 @@ resource "aws_ecs_task_definition" "tfod_service" {
       "resourceRequirements" : [
         {
           "type" : "GPU",
-          "value" : "${var.gpus}"
+          "value" : tostring(var.gpus)
         }
       ],
       "command" : [
@@ -356,16 +326,16 @@ resource "aws_ecs_task_definition" "tfod_service" {
     },
     {
       "essential" : false,
-      "image" : "035663780217.dkr.ecr.eu-west-2.amazonaws.com/m1l0/artifactsv2:latest",
+      "image" : "${var.backup_image}",
       "name" : "backup",
       "environment" : [
         {
           "name" : "M1L0_WORKING_DIR",
-          "value" : "/opt/tfod"
+          "value" : "/opt/tfod/experiments/training"
         },
         {
           "name" : "M1L0_OUTPUT",
-          "value" : "s3://tfodbackup"
+          "value" : "${var.backup_bucket}"
         },
         {
           "name" : "M1L0_FAMILY",
@@ -377,16 +347,58 @@ resource "aws_ecs_task_definition" "tfod_service" {
         },
         {
           "name" : "M1L0_REGION",
-          "value" : "eu-west-2"
+          "value" : "${var.aws_region}"
         }
       ],
-      "mountPoints" : [
+      "logConfiguration" : {
+        "logDriver" : "awslogs",
+        "options" : {
+          "awslogs-region" : "${var.aws_region}",
+          "awslogs-group" : aws_cloudwatch_log_group.main.name,
+          "awslogs-stream-prefix" : "ecs"
+        }
+      },
+      "volumesFrom" : [
         {
-          "sourceVolume" : "workdir",
-          "containerPath" : "/opt/tfod",
+          "sourceContainer" : "${var.tfod_service_name}",
           "readOnly" : false
         }
+      ]
+    },
+    {
+      "essential" : false,
+      "image" : "${var.backup_image}",
+      "name" : "backup_model",
+      "environment" : [
+        {
+          "name" : "M1L0_WORKING_DIR",
+          "value" : "/opt/tfod/experiments/exported_model"
+        },
+        {
+          "name" : "M1L0_OUTPUT",
+          "value" : "${var.backup_bucket}"
+        },
+        {
+          "name" : "M1L0_FAMILY",
+          "value" : "object-detector"
+        },
+        {
+          "name" : "M1L0_JOBID",
+          "value" : "12345"
+        },
+        {
+          "name" : "M1L0_REGION",
+          "value" : "${var.aws_region}"
+        }
       ],
+      "logConfiguration" : {
+        "logDriver" : "awslogs",
+        "options" : {
+          "awslogs-region" : "${var.aws_region}",
+          "awslogs-group" : aws_cloudwatch_log_group.main.name,
+          "awslogs-stream-prefix" : "ecs"
+        }
+      },
       "volumesFrom" : [
         {
           "sourceContainer" : "${var.tfod_service_name}",
@@ -395,30 +407,39 @@ resource "aws_ecs_task_definition" "tfod_service" {
       ]
     }
   ])
-}
-
-resource "aws_ecs_service" "tfod_service" {
-  name                  = var.tfod_service_name
-  cluster               = module.ecs.this_ecs_cluster_name
-  task_definition       = aws_ecs_task_definition.tfod_service.arn
-  desired_count         = 1
-  depends_on            = [aws_instance.ecs_instance]
-  wait_for_steady_state = true
-  force_new_deployment  = true
-
-  launch_type = "EC2"
-
-  ordered_placement_strategy {
-    type  = "binpack"
-    field = "cpu"
-  }
-
-  lifecycle {
-    ignore_changes = [task_definition]
-  }
 
   placement_constraints {
-    type       = "memberOf"
-    expression = "ec2InstanceId==${aws_instance.ecs_instance.id}"
+    type = "memberOf"
+    expression = "attribute:ecs.instance-type == ${var.instance_type}"
+  }
+}
+
+## Provision EC2 Instance first
+resource "aws_instance" "ecs_instance" {
+  ami = data.aws_ami.amazon_ecs_linux_gpu.id
+
+  iam_instance_profile = "${var.tfod_service_name}-ecsInstanceProfile"
+
+  instance_type = var.instance_type
+
+  instance_initiated_shutdown_behavior = "terminate"
+
+  monitoring = false
+
+  security_groups = [module.vpc.default_security_group_id, module.ssh_private_vpc.security_group_id]
+
+  subnet_id = module.vpc.private_subnets[0]
+
+  root_block_device {
+    volume_type = "gp3"
+    volume_size = 100
+  }
+
+  user_data = data.template_cloudinit_config.config.rendered
+
+  key_name = aws_key_pair.deployer.key_name
+
+  tags = {
+    Name = "tfod"
   }
 }

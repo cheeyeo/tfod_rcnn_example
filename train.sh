@@ -1,7 +1,6 @@
 #!/bin/bash
 
-set -e
-set -x
+set -ex
 set -o pipefail
 
 # usage: source ./train.sh models lisa/experiments/training lisa/experiments/exported_model lisa/records faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8 <num_classes> <min_dim> <max_dim> <num_steps> <batch_size> <num_examples>
@@ -11,7 +10,14 @@ currentdir=$(pwd)
 tfod_dir=${currentdir}/${1}
 model_dir=${currentdir}/${2}
 exported_dir=${currentdir}/${3}
-records_dir=${currentdir}/${4}
+
+if [[ ${4} == *"s3"* ]]; then
+	records_dir=${4}
+else
+  records_dir=${currentdir}/${4}
+fi
+
+
 pretrained_model_dir=${model_dir}/${5}
 # generated config file path
 pipeline_config="${model_dir}/pipeline.config"
@@ -43,18 +49,20 @@ echo "Getting training data..."
 if [[ $records_dir == *"s3"* ]]; then
 	echo "S3 FOUND!"
 
+	RECORDS_PATH=/opt/tfod/records
+
 	mkdir -p /tmp/records
 	mkfifo /tmp/records/classes.pbtxt
 	mkfifo /tmp/records/training.record
 	mkfifo /tmp/records/testing.record
 
-	aws s3 cp --cli-read-timeout 0 ${training_data_path}/classes.pbtxt - > /tmp/records/classes.pbtxt &
+	aws s3 cp --cli-read-timeout 0 ${records_dir}/classes.pbtxt - > /tmp/records/classes.pbtxt &
 
-	aws s3 cp --cli-read-timeout 0 ${training_data_path}/training.record - > /tmp/records/training.record &
+	aws s3 cp --cli-read-timeout 0 ${records_dir}/training.record - > /tmp/records/training.record &
 
-	aws s3 cp --cli-read-timeout 0 ${training_data_path}/testing.record - > /tmp/records/testing.record &
+	aws s3 cp --cli-read-timeout 0 ${records_dir}/testing.record - > /tmp/records/testing.record &
 
-	python3 readfifo.py --input_dir /tmp/records --output "/opt/tfod/records"
+	python3 readfifo.py --input_dir /tmp/records --output "${RECORDS_PATH}"
 
 	echo "Waiting for named pipes to close..."
 	sleep 5
@@ -63,7 +71,7 @@ if [[ $records_dir == *"s3"* ]]; then
 	echo "Removing named pipes"
 	rm -rf /tmp/records
 
-	export RECORDS_DIR="/opt/tfod/reords"
+	export RECORDS_DIR="${RECORDS_PATH}"
 fi
 
 echo "Generating config file for training..."

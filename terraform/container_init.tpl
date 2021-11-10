@@ -2,6 +2,8 @@
 
 sudo yum update -y
 
+echo "ip_resolve=4" >> /etc/yum.conf
+
 cat << EOF > /etc/ecs/ecs.config
 ECS_CLUSTER=${clustername}
 ECS_ENABLE_TASK_IAM_ROLE=true

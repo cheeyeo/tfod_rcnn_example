@@ -1,4 +1,4 @@
-.PHONY: train export local-run ecs-run
+.PHONY: train export local-run ecs-run setup apply teardown
 
 local-run:
 	docker run --gpus all --rm -v "${LOCAL_DATA_PATH}":/opt/tfod/records m1l0/tfod:latest "models" "experiments/training" "experiments/exported_model" "records" "faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8" 3 600 1024 50000 1 955
@@ -20,3 +20,17 @@ export:
 	--pipeline_config_path "${PIPELINE_CONFIG_PATH}" \
 	--trained_checkpoint_prefix "${MODEL_DIR}/model.ckpt-50000" \
 	--output "${EXPORTED_DIR}"
+
+setup:
+	terraform -chdir=terraform init
+	terraform -chdir=terraform plan -out=myplan -var-file=config.tfvars
+
+apply:
+	terraform -chdir=terraform apply myplan
+
+teardown:
+	terraform -chdir=terraform destroy -var-file=config.tfvars
+
+runtask:
+	terraform -chdir=terraform output -json > configs.json
+	./runtask.sh configs.json
