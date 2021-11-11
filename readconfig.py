@@ -34,9 +34,6 @@ if __name__ == "__main__":
 
     configs = config_util.get_configs_from_pipeline_file(config_file)
 
-    # print(type(configs["model"]))
-    # print(dir(configs["model"]))
-    # print(configs["model"].faster_rcnn.num_classes)
     print(configs.keys())
 
     fine_tune_checkpoint = os.path.join(os.environ.get("PRETRAINED_MODEL_DIR"), "checkpoint", "ckpt-0")
@@ -51,6 +48,7 @@ if __name__ == "__main__":
     configs["model"].faster_rcnn.num_classes = num_classes
     configs["model"].faster_rcnn.image_resizer.keep_aspect_ratio_resizer.min_dimension = min_dim
     configs["model"].faster_rcnn.image_resizer.keep_aspect_ratio_resizer.max_dimension = max_dim
+    configs["model"].faster_rcnn.image_resizer.keep_aspect_ratio_resizer.pad_to_max_dimension = False
 
     # Configure train_config num_steps, batch_size etc
     configs["train_config"].batch_size = batch_size
@@ -58,6 +56,11 @@ if __name__ == "__main__":
     configs["train_config"].fine_tune_checkpoint = fine_tune_checkpoint
     configs["train_config"].fine_tune_checkpoint_type = fine_tune_checkpoint_type
     configs["train_config"].from_detection_checkpoint = True
+
+    # configures cosine learning rate decay to match num_steps
+    configs["train_config"].optimizer.momentum_optimizer.learning_rate.cosine_decay_learning_rate.total_steps = num_steps
+    configs["train_config"].optimizer.momentum_optimizer.learning_rate.cosine_decay_learning_rate.warmup_steps = num_steps // 40
+
     configs["train_input_config"].label_map_path = label_map_path
     configs["train_input_config"].tf_record_input_reader.input_path[0] = training_record_path
 

@@ -90,6 +90,14 @@ python3 models/research/object_detection/model_main_tf2.py \
 	--sample_1_of_n_eval_examples=1 \
 	--alsologtostderr
 
+# eval runs in loop for an hour 3600 secs waiting for new checkpoints; set to 300 secs / 5 mins before exiting
+echo "Evaluating model..."
+python3 models/research/object_detection/model_main_tf2.py \
+	--pipeline_config_path="${PIPELINE_CONFIG_PATH}" \
+	--model_dir="${MODEL_DIR}" \
+	--checkpoint_dir="${MODEL_DIR}" \
+	--eval_timeout=300
+
 echo "Exporting model..."
 python3 models/research/object_detection/exporter_main_v2.py \
 	--input_type image_tensor \

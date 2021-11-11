@@ -36,9 +36,9 @@ export RECORDS_DIR="${records_dir}"
 export PRETRAINED_MODEL_DIR="${pretrained_model_dir}"
 
 # echo "Generating config file for training..."
-# python readconfig.py --num_classes=${num_classes} \
-#                      --min_dim=${min_dim} \
-# 		                 --max_dim=${max_dim} \
-# 		                 --num_steps=${num_steps} \
-# 		                 --batch_size=${batch_size} \
-# 		                 --num_examples=${num_examples}
+python readconfig.py --num_classes=${num_classes} \
+                     --min_dim=${min_dim} \
+		                 --max_dim=${max_dim} \
+		                 --num_steps=${num_steps} \
+		                 --batch_size=${batch_size} \
+		                 --num_examples=${num_examples}

@@ -1,5 +1,15 @@
 .PHONY: train local-run ecs-run setup apply teardown
 
+build-docker:
+	docker build -t m1l0/tfod:latest -f Dockerfile .
+
+ecs-push: build-docker
+	aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ECR_TARGET}
+
+	docker tag m1l0/tfod:latest ${AWS_ECR_TARGET}/m1l0/tfod:latest
+
+	docker push ${AWS_ECR_TARGET}/m1l0/tfod:latest
+
 local-run:
 	docker run --gpus all --rm -v "${LOCAL_DATA_PATH}":/opt/tfod/records m1l0/tfod:latest "models" "experiments/training" "experiments/exported_model" "records" "faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8" 3 600 1024 50000 1 955
 
