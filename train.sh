@@ -91,8 +91,8 @@ python3 models/research/object_detection/model_main_tf2.py \
 	--alsologtostderr
 
 echo "Exporting model..."
-python3 models/research/object_detection/export_inference_graph.py \
+python3 models/research/object_detection/exporter_main_v2.py \
 	--input_type image_tensor \
 	--pipeline_config_path "${PIPELINE_CONFIG_PATH}" \
-	--trained_checkpoint_prefix "${MODEL_DIR}/model.ckpt-${num_steps}" \
-	--output "${EXPORTED_DIR}"
+	--trained_checkpoint_dir "${MODEL_DIR}" \
+	--output_directory "${EXPORTED_DIR}"
