@@ -3,7 +3,26 @@
 set -ex
 set -o pipefail
 
-# usage: source ./train.sh models lisa/experiments/training lisa/experiments/exported_model lisa/records faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8 <num_classes> <min_dim> <max_dim> <num_steps> <batch_size> <num_examples>
+
+# Function to download the model from TFOD Model zoo v2
+download_pretrained_models() {
+	local modelname=$1
+
+	echo "Downloading model ${modelname} to $MODEL_DIR"
+
+	curl -L -o "$MODEL_DIR/${modelname}.tar.gz" http://download.tensorflow.org/models/object_detection/tf2/20200711/${modelname}.tar.gz && \
+	tar -zxvf "$MODEL_DIR/${modelname}.tar.gz" -C "$MODEL_DIR" && \
+	rm -rf "$MODEL_DIR/${modelname}.tar.gz"
+}
+
+
+# usage: ./train.sh models lisa/experiments/training lisa/experiments/exported_model lisa/records faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8 <num_classes> <min_dim> <max_dim> <num_steps> <batch_size> <num_test_examples>
+
+if [[ $# -ne 11 ]]; then
+	echo "Incorrect usage!"
+	echo "Usage: $0 <tfod_source_dir> <model_training_dir> <model_export_dir> <records_dir> <pretrained_model_dir> <num_classes> <min_dim> <max_dim> <num_steps> <batch_size> <num_test_samples>"
+	exit 1
+fi
 
 echo "Setting up paths for TFOD..."
 currentdir=$(pwd)
@@ -35,7 +54,6 @@ echo "Model dir: ${model_dir}"
 echo "Exported Dir: ${exported_dir}"
 echo "Training Data Dir: ${records_dir}"
 echo "Pipeline config filename: ${pipeline_config}"
-
 export PYTHONPATH=${PYTHONPATH}:"${tfod_dir}/research":"${tfod_dir}/research/slim"
 echo "Updated PYTHONPATH: ${PYTHONPATH}"
 
@@ -44,6 +62,10 @@ export MODEL_DIR="${model_dir}"
 export EXPORTED_DIR="${exported_dir}"
 export RECORDS_DIR="${records_dir}"
 export PRETRAINED_MODEL_DIR="${pretrained_model_dir}"
+
+echo "Getting pretrained model..."
+download_pretrained_models "${5}"
+
 
 echo "Getting training data..."
 if [[ $records_dir == *"s3"* ]]; then
@@ -96,7 +118,8 @@ python3 models/research/object_detection/model_main_tf2.py \
 	--pipeline_config_path="${PIPELINE_CONFIG_PATH}" \
 	--model_dir="${MODEL_DIR}" \
 	--checkpoint_dir="${MODEL_DIR}" \
-	--eval_timeout=300
+	--eval_timeout=300 \
+	--alsologtostderr
 
 echo "Exporting model..."
 python3 models/research/object_detection/exporter_main_v2.py \

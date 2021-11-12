@@ -30,7 +30,8 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 WORKDIR /opt/tfod
 
 COPY train.sh readfifo.py readconfig.py ./
-RUN chmod +x train.sh
+RUN chmod +x train.sh && \
+    mkdir -p records experiments/evaluation experiments/exported_model experiments/training
 
 RUN git clone https://github.com/tensorflow/models.git && \
     cd models/research/ && \
@@ -40,12 +41,6 @@ RUN git clone https://github.com/tensorflow/models.git && \
     python3 -m pip install --no-cache-dir . && \
     python3 -m pip install opencv-python-headless==4.5.3.56 && \
     python3 object_detection/builders/model_builder_tf2_test.py
-
-RUN mkdir -p experiments/evaluation experiments/exported_model experiments/training records && \
-    cd experiments/training && \
-    curl -L -o faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz http://download.tensorflow.org/models/object_detection/tf2/20200711/faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz && \
-    tar -zxvf faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz && \
-    rm -rf faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz
 
 
 ENTRYPOINT ["/bin/bash", "train.sh"]

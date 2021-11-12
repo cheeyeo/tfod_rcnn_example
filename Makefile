@@ -36,4 +36,4 @@ teardown:
 
 runtask:
 	terraform -chdir=terraform output -json > configs.json
-	./runtask.sh configs.json
+	#./runtask.sh configs.json
