@@ -10,7 +10,7 @@ output "cluster_name" {
 
 output "task_definition" {
   description = "Task definition arn"
-  value = aws_ecs_task_definition.tfod_task_definition.arn
+  value       = aws_ecs_task_definition.tfod_task_definition.arn
 }
 
 output "region" {
@@ -20,7 +20,11 @@ output "region" {
 
 output "profile" {
   description = "AWS Profile"
-  value = var.aws_profile
+  value       = var.aws_profile
   sensitive   = true
 }
 
+output "log_group" {
+  description = "Cloudwatch Log Group name"
+  value = aws_cloudwatch_log_group.main.name
+}

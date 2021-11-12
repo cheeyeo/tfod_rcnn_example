@@ -152,6 +152,24 @@ variable "backup_image" {
 
 variable "backup_bucket" {
   description = "S3 Bucket to store artifacts"
-  type = string
-  default = ""
+  type        = string
+  default     = ""
+}
+
+variable "exported_bucket" {
+  description = "S3 Bucket to store artifacts"
+  type        = string
+  default     = ""
+}
+
+variable "pretrained_model" {
+  description = "Name of pre-trained model from TF Model Zoo"
+  type        = string
+  default     = ""
+}
+
+variable "records_uri" {
+  description = "URI of records for training and testing"
+  type        = string
+  default     = ""
 }

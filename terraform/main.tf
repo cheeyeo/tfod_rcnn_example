@@ -299,8 +299,8 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         "models",
         "experiments/training",
         "experiments/exported_model",
-        "s3://tfod",
-        "faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8",
+        "${var.records_uri}",
+        "${var.pretrained_model}",
         tostring(var.num_classes),
         tostring(var.min_dim),
         tostring(var.max_dim),
@@ -343,7 +343,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "12345"
+          "value" : "67890"
         },
         {
           "name" : "M1L0_REGION",
@@ -384,7 +384,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "12345"
+          "value" : "67890"
         },
         {
           "name" : "M1L0_REGION",
@@ -409,7 +409,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
   ])
 
   placement_constraints {
-    type = "memberOf"
+    type       = "memberOf"
     expression = "attribute:ecs.instance-type == ${var.instance_type}"
   }
 }

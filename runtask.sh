@@ -15,19 +15,45 @@ profile=$(cat ${config_file} | jq -r '.profile.value')
 region=$(cat ${config_file} | jq -r '.region.value')
 cluster_name=$(cat ${config_file} | jq -r '.cluster_name.value')
 task_definition=$(cat ${config_file} | jq -r '.task_definition.value')
+log_group=$(cat ${config_file} | jq -r '.log_group.value')
 
 echo "PROFILE: ${profile}"
 echo "REGION: ${region}"
 echo "CLUSTER NAME: ${cluster_name}"
 echo "TASK DEF: ${task_definition}"
+echo "LOG GROUP: ${log_group}"
 
 TASK_ARN=$(aws ecs run-task --cluster ${cluster_name} --task-definition ${task_definition} --profile ${profile} --region ${region} | jq -r '.tasks[].taskArn')
 
-# NOTE: Below polls every 6 secs; fails after 100 tries
-# 6 * 100 = 600s i.e. 10 mins
 echo "Watching task: ${TASK_ARN}"
-aws ecs wait tasks-running --cluster ${cluster_name} --tasks "${TASK_ARN}" --region ${region} --profile ${profile}
-aws ecs wait tasks-stopped --cluster ${cluster_name} --tasks "${TASK_ARN}" --region ${region} --profile ${profile}
 
-# How to log?
-# aws --profile ${profile} --region ${region} logs tail /ecs/tfod --log-stream-names "ecs/tfod/d523070853f44e75b67afc526161dea5" --follow --format short
+status="PENDING"
+while [[ $status == "PENDING" ]]; do
+	status=$(aws ecs describe-tasks --tasks ${TASK_ARN} --cluster ${cluster_name} | jq -r '.tasks[0] | .lastStatus')
+
+	echo "Task Status: ${status}"
+
+	sleep 5
+done
+
+tfod_stream=$(aws --profile ${profile} --region ${region} logs describe-log-streams --log-group-name "${log_group}" | jq -r ."logStreams | .[-1].logStreamName")
+
+if [[ $status == "RUNNING" ]]; then
+	echo "Task is running"
+	echo "Tailing log..."
+
+	aws --profile ${profile} --region ${region} logs tail /ecs/tfod --log-stream-names "${tfod_stream}" --follow --format short
+fi
+
+# If logs exit it means there's no more logs to display
+# Assume task has stopped
+task_info=$(aws ecs describe-tasks --tasks ${TASK_ARN} --cluster ${cluster_name})
+last_status=$(cat $task_info | jq -r '.tasks[0] | .lastStatus')
+stop_code=$(cat $task_info | jq -r '.tasks[0] | .stopCode')
+stop_reason=$(cat $task_info | jq -r '.tasks[0] | .stoppedReason')
+failures=$(cat $task_info | jq -r '.failures')
+
+echo "Task Last Status: ${last_status}"
+echo "Stop Code: ${stop_code}"
+echo "Stop Reason: ${stop_reason}"
+echo "Failures: ${failures[*]}"

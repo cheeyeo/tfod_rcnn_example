@@ -26,9 +26,9 @@ train:
 
 setup:
 	terraform -chdir=terraform init
-	terraform -chdir=terraform plan -out=myplan -var-file=config.tfvars
 
 apply:
+	terraform -chdir=terraform plan -out=myplan -var-file=config.tfvars
 	terraform -chdir=terraform apply myplan
 
 teardown:
@@ -36,4 +36,4 @@ teardown:
 
 runtask:
 	terraform -chdir=terraform output -json > configs.json
-	#./runtask.sh configs.json
+	./runtask.sh configs.json

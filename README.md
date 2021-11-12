@@ -67,71 +67,98 @@ python object_detection/builders/model_builder_tf2_test.py
 
 ```
 mkdir -p lisa/experiments/training
-
-curl -L -o faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz http://download.tensorflow.org/models/object_detection/tf2/20200711/faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz
-
-
-tar -zxvf faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz
-
-# check that it has a checkpoint dir, saved_model dir, pipeline.config file
-ls -al faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8
-
-# cp the pipeline.config file into lisa/experiments/training, rename it
 ```
 
-* Update the copied pipeline.config file as follows:
+* Run `train.sh` with the following parameters:
+
+  ```
+  ./train.sh models lisa/experiments/training lisa/experiments/exported_model lisa/records faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8 <num_classes> <min_dim> <max_dim> <num_steps> <batch_size> <num_test_examples>
+  ```
+
+  <models> => Directory of tfod models clone
+  <model_dir> => Directory where training artifacts stored
+  <exported_model_dir> => Directory to where exported model artifacts stored
+  <pretrained_model_name> => Pretrained model name e.g. "faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8"
+  <num_classes> => Number of labels / categories in config file
+  <min_dim> => Min dim in config file
+  <max_dim> => Max dim in config file
+  <num_steps> => Num of training steps
+  <batch_size> => Batch size; must match num of gpus
+  <num_of_test_samples> => Number of test samples for evaluation
+
+
+### Results of initial run
+
+Train on single p3.2xlarge instance with 1 GPU, 16GB GPU RAM for 50000 steps
+
+Train with following config:
+
+* num_steps: 50000
+* min_dim: 600
+* max_dim: 1024
+* num_classes: 3
+* batch_size: 1
+
+The evaluation results are as follows:
 ```
-model {
-  faster_rcnn {
-    num_classes: 3
-
-   }
-}
-...
-
-# set batch size to 1 but can be higher if you have compute
-# set num steps to 50000; min is 20000
-# set fine_tune_checkpoint to directory of 'checkpoint' in the downloaded model's weights; only use the prefix
-train_config: {
-  batch_size: 1
-  num_steps: 50000
-
-  ...
-  fine_tune_checkpoint_version: V2
-  fine_tune_checkpoint: "<location of model weights>/checkpoint/ckpt-0"
-  from_detection_checkpoint: true
-  fine_tune_checkpoint_type: "detection"
-}
-
-...
-
-
-train_input_reader: {
-  label_map_path: "<location of classes.pbtxt>"
-  tf_record_input_reader {
-    input_path: "<location of training.record>"
-  }
-}
-
-
-...
-
-# num_examples to match actual num of samples in test set
-eval_config: {
-  metrics_set: "coco_detection_metrics"
-  num_examples: 955
-}
-
-eval_input_reader: {
-  label_map_path: "<location of classes.pbtxt>"
-  shuffle: false
-  num_epochs: 1
-  tf_record_input_reader {
-    input_path: "<location of testing.record>"
-  }
-}
-
+2021-11-12T21:46:47 Accumulating evaluation results...
+2021-11-12T21:46:48 DONE (t=0.84s).
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.248
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.731
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.101
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.123
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.348
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.654
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.301
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.340
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.364
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.287
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.421
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.692
+2021-11-12T21:46:48 INFO:tensorflow:Eval metrics at step 50000
+2021-11-12T21:46:48 I1112 21:46:48.684187 139908352481088 model_lib_v2.py:1007] Eval metrics at step 50000
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP: 0.247610
+2021-11-12T21:46:48 I1112 21:46:48.692481 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP: 0.247610
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP@.50IOU: 0.730677
+2021-11-12T21:46:48 I1112 21:46:48.693813 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP@.50IOU: 0.730677
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP@.75IOU: 0.100935
+2021-11-12T21:46:48 I1112 21:46:48.695106 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP@.75IOU: 0.100935
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP (small): 0.123162
+2021-11-12T21:46:48 I1112 21:46:48.696399 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP (small): 0.123162
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP (medium): 0.348016
+2021-11-12T21:46:48 I1112 21:46:48.697730 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP (medium): 0.348016
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP (large): 0.654373
+2021-11-12T21:46:48 I1112 21:46:48.699023 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP (large): 0.654373
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@1: 0.300572
+2021-11-12T21:46:48 I1112 21:46:48.700293 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@1: 0.300572
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@10: 0.339940
+2021-11-12T21:46:48 I1112 21:46:48.701619 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@10: 0.339940
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100: 0.363816
+2021-11-12T21:46:48 I1112 21:46:48.702923 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100: 0.363816
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100 (small): 0.286649
+2021-11-12T21:46:48 I1112 21:46:48.704222 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100 (small): 0.286649
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100 (medium): 0.420546
+2021-11-12T21:46:48 I1112 21:46:48.705553 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100 (medium): 0.420546
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100 (large): 0.691667
+2021-11-12T21:46:48 I1112 21:46:48.706911 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100 (large): 0.691667
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/RPNLoss/localization_loss: 0.003441
+2021-11-12T21:46:48 I1112 21:46:48.707967 139908352481088 model_lib_v2.py:1010]   + Loss/RPNLoss/localization_loss: 0.003441
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/RPNLoss/objectness_loss: 0.118597
+2021-11-12T21:46:48 I1112 21:46:48.709069 139908352481088 model_lib_v2.py:1010]   + Loss/RPNLoss/objectness_loss: 0.118597
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/BoxClassifierLoss/localization_loss: 0.064199
+2021-11-12T21:46:48 I1112 21:46:48.710147 139908352481088 model_lib_v2.py:1010]   + Loss/BoxClassifierLoss/localization_loss: 0.064199
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/BoxClassifierLoss/classification_loss: 0.058869
+2021-11-12T21:46:48 I1112 21:46:48.711216 139908352481088 model_lib_v2.py:1010]   + Loss/BoxClassifierLoss/classification_loss: 0.058869
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/regularization_loss: 0.000000
+2021-11-12T21:46:48 I1112 21:46:48.712285 139908352481088 model_lib_v2.py:1010]   + Loss/regularization_loss: 0.000000
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/total_loss: 0.245106
+2021-11-12T21:46:48 I1112 21:46:48.713370 139908352481088 model_lib_v2.py:1010]   + Loss/total_loss: 0.245106
 ```
+
+
+
+
+
 
 ### Running with docker
 
@@ -145,26 +172,9 @@ eval_input_reader: {
   AWS_ROOT: Path of aws credentials if running locally (optional)
   
   S3_DATA: Path to where training data stored (optional)
-  
-  LOCAL_DATA_PATH: Path to where training data held locally
-  
-  LOCAL_CONFIG_PATH: Path to training config file locally
   ```
 
 * Run `make local-run` which will start training process using local paths defined in .env or `make ecs-run` which uses s3 dataset
-
-
-### Running manually
-
-* Change back to current working dir of this project and run `source setup.sh <tfod_dir> <model_dir> <model_export_dir> <config_file_name>` where:
-  ```
-	**tfod_dir**: Cloned models dir
-	**model_dir**: Dir where model's weights being extracted to
-  **model_export_dir**: Dir to save trained model's weights
-	**config_file_name**: Name of config file within the model_dir.
-  ```
-
-* Run `make train` or `make export`
 
 
 ### TODO:
