@@ -3,20 +3,117 @@
 set -ex
 set -o pipefail
 
+# Function to get TF model zoo download url
+download_model_url() {
+	case $1 in
+	"CenterNet HourGlass104 512x512")
+    local tarfile="centernet_hg104_512x512_coco17_tpu-8.tar.gz";;
+  "CenterNet HourGlass104 Keypoints 512x512")
+    local tarfile="centernet_hg104_512x512_kpts_coco17_tpu-32.tar.gz";;
+  "CenterNet HourGlass104 1024x1024")
+    local tarfile="centernet_hg104_1024x1024_coco17_tpu-32.tar.gz";;
+  "CenterNet HourGlass104 Keypoints 1024x1024")
+    local tarfile="centernet_hg104_1024x1024_kpts_coco17_tpu-32.tar.gz";;
+  "CenterNet Resnet50 V1 FPN 512x512")
+    local tarfile="centernet_resnet50_v1_fpn_512x512_coco17_tpu-8.tar.gz";;
+  "CenterNet Resnet50 V1 FPN Keypoints 512x512")
+    local tarfile="centernet_resnet50_v1_fpn_512x512_kpts_coco17_tpu-8.tar.gz";;
+  "CenterNet Resnet101 V1 FPN 512x512")
+    local tarfile="http://download.tensorflow.org/models/object_detection/tf2/20200711/centernet_resnet101_v1_fpn_512x512_coco17_tpu-8.tar.gz";;
+  "CenterNet Resnet50 V2 512x512")
+    local tarfile="centernet_resnet50_v2_512x512_coco17_tpu-8.tar.gz";;
+  "CenterNet Resnet50 V2 Keypoints 512x512")
+    local tarfile="centernet_resnet50_v2_512x512_kpts_coco17_tpu-8.tar.gz";;
+  "CenterNet MobileNetV2 FPN 512x512")
+    local tarfile="centernet_mobilenetv2fpn_512x512_coco17_od.tar.gz";;
+  "CenterNet MobileNetV2 FPN Keypoints 512x512")
+    local tarfile="centernet_mobilenetv2fpn_512x512_coco17_kpts.tar.gz";;
+  "EfficientDet D0 512x512")
+    local tarfile="efficientdet_d0_coco17_tpu-32.tar.gz";;
+  "EfficientDet D1 640x640")
+    local tarfile="efficientdet_d1_coco17_tpu-32.tar.gz";;
+  "EfficientDet D2 768x768")
+    local tarfile="efficientdet_d2_coco17_tpu-32.tar.gz";;
+  "EfficientDet D3 896x896")
+    local tarfile="efficientdet_d3_coco17_tpu-32.tar.gz";;
+  "EfficientDet D4 1024x1024")
+    local tarfile="efficientdet_d4_coco17_tpu-32.tar.gz";;
+  "EfficientDet D5 1280x1280")
+    local tarfile="efficientdet_d5_coco17_tpu-32.tar.gz";;
+  "EfficientDet D6 1280x1280")
+    local tarfile="efficientdet_d6_coco17_tpu-32.tar.gz";;
+  "EfficientDet D7 1536x1536")
+    local tarfile="efficientdet_d7_coco17_tpu-32.tar.gz";;
+  "SSD MobileNet v2 320x320")
+    local tarfile="ssd_mobilenet_v2_320x320_coco17_tpu-8.tar.gz";;
+  "SSD MobileNet V1 FPN 640x640")
+    local tarfile="ssd_mobilenet_v1_fpn_640x640_coco17_tpu-8.tar.gz";;
+  "SSD MobileNet V2 FPNLite 320x320")
+    local tarfile="ssd_mobilenet_v2_fpnlite_320x320_coco17_tpu-8.tar.gz";;
+  "SSD MobileNet V2 FPNLite 640x640")
+    local tarfile="ssd_mobilenet_v2_fpnlite_640x640_coco17_tpu-8.tar.gz";;
+  "SSD ResNet50 V1 FPN 640x640")
+    local tarfile="ssd_resnet50_v1_fpn_640x640_coco17_tpu-8.tar.gz";;
+  "SSD ResNet50 V1 FPN 1024x1024")
+    local tarfile="ssd_resnet50_v1_fpn_1024x1024_coco17_tpu-8.tar.gz";;
+  "SSD ResNet101 V1 FPN 640x640")
+    local tarfile="ssd_resnet101_v1_fpn_640x640_coco17_tpu-8.tar.gz";;
+  "SSD ResNet101 V1 FPN 1024x1024")
+    local tarfile="ssd_resnet101_v1_fpn_1024x1024_coco17_tpu-8.tar.gz";;
+  "SSD ResNet152 V1 FPN 640x640")
+    local tarfile="ssd_resnet152_v1_fpn_640x640_coco17_tpu-8.tar.gz";;
+  "SSD ResNet152 V1 FPN 1024x1024")
+    local tarfile="ssd_resnet152_v1_fpn_1024x1024_coco17_tpu-8.tar.gz";;
+  "Faster R-CNN ResNet50 V1 640x640")
+    local tarfile="faster_rcnn_resnet50_v1_640x640_coco17_tpu-8.tar.gz";;
+  "Faster R-CNN ResNet50 V1 1024x1024")
+    local tarfile="faster_rcnn_resnet50_v1_1024x1024_coco17_tpu-8.tar.gz";;
+  "Faster R-CNN ResNet50 V1 800x1333")
+    local tarfile="faster_rcnn_resnet50_v1_800x1333_coco17_gpu-8.tar.gz";;
+  "Faster R-CNN ResNet101 V1 640x640")
+    local tarfile="faster_rcnn_resnet101_v1_640x640_coco17_tpu-8.tar.gz";;
+  "Faster R-CNN ResNet101 V1 1024x1024")
+    local tarfile="faster_rcnn_resnet101_v1_1024x1024_coco17_tpu-8.tar.gz";;
+  "Faster R-CNN ResNet101 V1 800x1333")
+    local tarfile="faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz";;
+  "Faster R-CNN ResNet152 V1 640x640")
+    local tarfile="faster_rcnn_resnet152_v1_640x640_coco17_tpu-8.tar.gz";;
+  "Faster R-CNN ResNet152 V1 1024x1024")
+    local tarfile="faster_rcnn_resnet152_v1_1024x1024_coco17_tpu-8.tar.gz";;
+  "Faster R-CNN ResNet152 V1 800x1333")
+    local tarfile="faster_rcnn_resnet152_v1_800x1333_coco17_gpu-8.tar.gz";;
+  "Faster R-CNN Inception ResNet V2 640x640")
+    local tarfile="faster_rcnn_inception_resnet_v2_640x640_coco17_tpu-8.tar.gz";;
+  "Faster R-CNN Inception ResNet V2 1024x1024")
+    local tarfile="faster_rcnn_inception_resnet_v2_1024x1024_coco17_tpu-8.tar.gz";;
+  "Mask R-CNN Inception ResNet V2 1024x1024")
+    local tarfile="mask_rcnn_inception_resnet_v2_1024x1024_coco17_gpu-8.tar.gz";;
+	*)
+    return 1;;
+  esac
+
+  echo ${tarfile}
+}
 
 # Function to download the model from TFOD Model zoo v2
 download_pretrained_models() {
-	local modelname=$1
+	MODEL_URL="http://download.tensorflow.org/models/object_detection/tf2/20200711"
 
-	echo "Downloading model ${modelname} to $MODEL_DIR"
+	local tarfile=$(download_model_url "$1")
 
-	curl -L -o "$MODEL_DIR/${modelname}.tar.gz" http://download.tensorflow.org/models/object_detection/tf2/20200711/${modelname}.tar.gz && \
-	tar -zxvf "$MODEL_DIR/${modelname}.tar.gz" -C "$MODEL_DIR" && \
-	rm -rf "$MODEL_DIR/${modelname}.tar.gz"
+	if [[ ! -z ${tarfile} ]]; then
+		echo "Downloading model ${tarfile} to /tmp"
+		curl -L -o "/tmp/${tarfile}" ${MODEL_URL}/${tarfile} && \
+		tar -zxvf "/tmp/${tarfile}" -C "$MODEL_DIR" && \
+		rm -rf "/tmp/${tarfile}"
+	else
+		echo "No model found!"
+		exit 1
+	fi
 }
 
 
-# usage: ./train.sh models lisa/experiments/training lisa/experiments/exported_model lisa/records faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8 <num_classes> <min_dim> <max_dim> <num_steps> <batch_size> <num_test_examples>
+# usage: ./train.sh models lisa/experiments/training lisa/experiments/exported_model lisa/records "Faster R-CNN ResNet101 V1 800x1333" <num_classes> <min_dim> <max_dim> <num_steps> <batch_size> <num_test_examples>
 
 if [[ $# -ne 11 ]]; then
 	echo "Incorrect usage!"
@@ -36,8 +133,6 @@ else
   records_dir=${currentdir}/${4}
 fi
 
-
-pretrained_model_dir=${model_dir}/${5}
 # generated config file path
 pipeline_config="${model_dir}/pipeline.config"
 
@@ -61,10 +156,15 @@ export PIPELINE_CONFIG_PATH="${pipeline_config}"
 export MODEL_DIR="${model_dir}"
 export EXPORTED_DIR="${exported_dir}"
 export RECORDS_DIR="${records_dir}"
-export PRETRAINED_MODEL_DIR="${pretrained_model_dir}"
 
 echo "Getting pretrained model..."
 download_pretrained_models "${5}"
+
+# setting the pretrained model dir
+fileurl=$(download_model_url "${5}")
+dirname_only=($(echo "${fileurl}" | tr '.' '\n'))
+
+export PRETRAINED_MODEL_DIR="${model_dir}/${dirname_only[0]}"
 
 
 echo "Getting training data..."

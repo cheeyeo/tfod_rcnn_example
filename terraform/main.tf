@@ -343,7 +343,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "67890"
+          "value" : "07156fbd-7d78-4801-b0df-0670300db638/training"
         },
         {
           "name" : "M1L0_REGION",
@@ -384,7 +384,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "67890"
+          "value" : "07156fbd-7d78-4801-b0df-0670300db638/exported_model"
         },
         {
           "name" : "M1L0_REGION",
@@ -414,7 +414,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
   }
 }
 
-## Provision EC2 Instance first
+## Provision EC2 Container Instance
 resource "aws_instance" "ecs_instance" {
   ami = data.aws_ami.amazon_ecs_linux_gpu.id
 
@@ -428,7 +428,11 @@ resource "aws_instance" "ecs_instance" {
 
   security_groups = [module.vpc.default_security_group_id, module.ssh_private_vpc.security_group_id]
 
-  subnet_id = module.vpc.private_subnets[0]
+  /*
+    NOTE: Need at least 3 private subnets as the p3 instances
+    may not be available in specific AZ; use the index to switch between different private subnets in different AZs i.e. if no capacity available use module.vpc.private_subnets[1] rather than module.vpc.private_subnets[0]
+  */
+  subnet_id = module.vpc.private_subnets[1]
 
   root_block_device {
     volume_type = "gp3"

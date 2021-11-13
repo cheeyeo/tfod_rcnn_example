@@ -54,19 +54,19 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", type=str, required=True, help="Path for exported model")
     ap.add_argument("--labels", type=str, required=True, help="Path to Labels File")
-    ap.add_argument("--image", type=str, help="Path to input image")
-    ap.add_argument("--num_classes", type=int, help="Num of class labels")
     ap.add_argument("--min_confidence", type=float, default=0.5, help="Min prob to filter weak detections...")
-    ap.add_argument("--output_file", type=str, default="result.png", help="Path to output file")
+    ap.add_argument("--output_dir", type=str, default="testresults", help="Directory to store test results")
+    ap.add_argument("--output_file_prefix", type=str, default="result", help="Prefix for output file")
+    ap.add_argument("--images", nargs="+", help="Images for inference")
 
     args = vars(ap.parse_args())
+
+    if not os.path.exists(args["output_dir"]):
+        os.mkdir(args["output_dir"])
 
     gpus = tf.config.list_physical_devices("GPU")
     for gpu in gpus:
         tf.config.experimental.set_memory_growth(gpu, True)
-
-    # set of colors for class labels
-    COLORS = np.random.uniform(0, 255, size=(args["num_classes"], 3))
 
     print("Loading model...")
     start_time = time.time()
@@ -79,40 +79,37 @@ if __name__ == "__main__":
 
     category_idx = label_map_util.create_category_index_from_labelmap(args["labels"], use_display_name=True)
 
-    (h, w), image_np = load_image(args["image"])
-    input_tensor = tf.convert_to_tensor(image_np)
-    input_tensor = np.expand_dims(input_tensor, axis=0)
-    image_copy = image_np.copy()
+    for idx, img in enumerate(args["images"]):
+        print("Object detection for image {}".format(img))
+        (h, w), image_np = load_image(img)
+        input_tensor = tf.convert_to_tensor(image_np)
+        input_tensor = np.expand_dims(input_tensor, axis=0)
+        image_copy = image_np.copy()
 
-    detections = detection_model(input_tensor)
-    num_detections = int(detections.pop("num_detections"))
-    detections = {key: value[0, :num_detections].numpy() for key, value in detections.items()}
-    detections["num_detections"] = num_detections
-    detections["detection_classes"] = detections["detection_classes"].astype(np.int64)
+        print("Start detection...")
+        start_time = time.time()
+        detections = detection_model(input_tensor)
+        num_detections = int(detections.pop("num_detections"))
+        detections = {key: value[0, :num_detections].numpy() for key, value in detections.items()}
+        detections["num_detections"] = num_detections
+        detections["detection_classes"] = detections["detection_classes"].astype(np.int64)
 
-    boxes = detections["detection_boxes"]
-    scores = detections["detection_scores"]
-    labels = detections["detection_classes"]
+        viz_utils.visualize_boxes_and_labels_on_image_array(
+            image_copy,
+            detections['detection_boxes'],
+            detections['detection_classes'],
+            detections['detection_scores'],
+            category_idx,
+            use_normalized_coordinates=True,
+            max_boxes_to_draw=200,
+            min_score_thresh=args["min_confidence"],
+            agnostic_mode=False)
 
-    for (box, label, score) in zip(boxes, labels, scores):
-        if score < args["min_confidence"]:
-            continue
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print("Inference took: {} secs".format(elapsed_time))
 
-        (startY, startX, endY, endX) = box
-        startX = int(startX * w)
-        startY = int(startY * h)
-        endX = int(endX * w)
-        endY = int(endY * h)
-
-        label = category_idx[label]
-        idx = int(label["id"] - 1)
-        label = "{}: {:.2f}".format(label["name"], score)
-        print("[INFO] Prediction: {}".format(label))
-
-        cv2.rectangle(image_copy, (startX, startY), (endX, endY), COLORS[idx], 2)
-        y = startY - 10 if startY - 10 > 10 else startY + 10
-        cv2.putText(image_copy, label, (startX, y), cv2.FONT_HERSHEY_SIMPLEX, 0.3, COLORS[idx], 1)
-
-    # cv2.imshow("Output", image_copy)
-    # cv2.waitKey(0)
-    cv2.imwrite(args["output_file"], image_copy)
+        # cv2.imshow("Output", image_copy)
+        # cv2.waitKey(0)
+        saved_path = os.path.join("testresults", "{}{}.png".format(args["output_file_prefix"], idx+1))
+        cv2.imwrite(saved_path, image_copy)

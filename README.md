@@ -38,7 +38,7 @@ Notes on the pre-trained models:
 We use the [Faster R-CNN Resnet101 V1 model] for this example.
 
 
-### Setup
+### Local Setup and training process
 
 * Download the [LISA Traffic signs dataset] into this working dir as 'lisa'. Create a subdir of 'records' and 'experiments'
 
@@ -61,7 +61,7 @@ python -m pip install .
 python object_detection/builders/model_builder_tf2_test.py
 ```
 
-* If there are errors with the running of the test script, resolve them first before moving on to the next step below.
+* If there are errors with the running of the test script, resolve them first before moving on to the steps below.
 
 * Create a training directory for the model's checkpoints files during training and to load the pre-trained model's weights. 
 
@@ -72,13 +72,23 @@ mkdir -p lisa/experiments/training
 * Run `train.sh` with the following parameters:
 
   ```
-  ./train.sh models lisa/experiments/training lisa/experiments/exported_model lisa/records faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8 <num_classes> <min_dim> <max_dim> <num_steps> <batch_size> <num_test_examples>
+  ./train.sh models \
+  lisa/experiments/training \
+  lisa/experiments/exported_model \
+  lisa/records \
+  "Faster R-CNN ResNet101 V1 800x1333" \
+  <num_classes> \
+  <min_dim> \
+  <max_dim> \
+  <num_steps> \
+  <batch_size> \
+  <num_test_examples>
   ```
 
   <models> => Directory of tfod models clone
   <model_dir> => Directory where training artifacts stored
   <exported_model_dir> => Directory to where exported model artifacts stored
-  <pretrained_model_name> => Pretrained model name e.g. "faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8"
+  <pretrained_model_name> => Pretrained model name e.g. "Faster R-CNN ResNet101 V1 800x1333"
   <num_classes> => Number of labels / categories in config file
   <min_dim> => Min dim in config file
   <max_dim> => Max dim in config file
@@ -87,17 +97,24 @@ mkdir -p lisa/experiments/training
   <num_of_test_samples> => Number of test samples for evaluation
 
 
-### Results of initial run
+### Results of initial run on AWS
 
-Train on single p3.2xlarge instance with 1 GPU, 16GB GPU RAM for 50000 steps
+For the purposes of evaluating the Faster-RCNN model on the [LISA Traffic signs dataset], the model was packaged as a docker image and trained on a single p3.2xlarge instance with 1 GPU, 16GB GPU RAM.
 
-Train with following config:
+The overall training time took approximately 2 hours.
 
+Training config:
 * num_steps: 50000
 * min_dim: 600
 * max_dim: 1024
 * num_classes: 3
 * batch_size: 1
+
+The rest of the config are kept as it is from the sample config file provided by the pre-trained model.
+
+The SGD optimizer is used with a momentum of **0.9**. 
+
+The learning rate is set to **0.01** with a cosine learning rate decay over the total number of training steps.
 
 The evaluation results are as follows:
 ```
@@ -155,28 +172,4 @@ The evaluation results are as follows:
 2021-11-12T21:46:48 I1112 21:46:48.713370 139908352481088 model_lib_v2.py:1010]   + Loss/total_loss: 0.245106
 ```
 
-
-
-
-
-
-### Running with docker
-
-* Create the docker image using the provided dockerfile
-
-* Create a `.env` file with following and source it:
-
-  ```
-  AWS_PROFILE: Name of aws_profile (optional)
-
-  AWS_ROOT: Path of aws credentials if running locally (optional)
-  
-  S3_DATA: Path to where training data stored (optional)
-  ```
-
-* Run `make local-run` which will start training process using local paths defined in .env or `make ecs-run` which uses s3 dataset
-
-
-### TODO:
-
-* Automate process of training model in cloud as it uses too much GPU resources locally
+The overall loss is =~ 0.24 which is high. This may be due to the high learning rate. The mAP@0.5 is 0.731.

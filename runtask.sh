@@ -48,10 +48,10 @@ fi
 # If logs exit it means there's no more logs to display
 # Assume task has stopped
 task_info=$(aws ecs describe-tasks --tasks ${TASK_ARN} --cluster ${cluster_name})
-last_status=$(cat $task_info | jq -r '.tasks[0] | .lastStatus')
-stop_code=$(cat $task_info | jq -r '.tasks[0] | .stopCode')
-stop_reason=$(cat $task_info | jq -r '.tasks[0] | .stoppedReason')
-failures=$(cat $task_info | jq -r '.failures')
+last_status=$(echo $task_info | jq -r '.tasks[0] | .lastStatus')
+stop_code=$(echo $task_info | jq -r '.tasks[0] | .stopCode')
+stop_reason=$(echo $task_info | jq -r '.tasks[0] | .stoppedReason')
+failures=$(echo $task_info | jq -r '.failures')
 
 echo "Task Last Status: ${last_status}"
 echo "Stop Code: ${stop_code}"

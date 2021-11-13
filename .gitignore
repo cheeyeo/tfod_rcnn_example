@@ -180,3 +180,5 @@ lisa
 models
 NOTES.md
 *.json
+testresults
+testexported_model
