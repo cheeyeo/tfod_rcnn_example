@@ -13,6 +13,8 @@
 
 [Original blog post on TFOD]: https://cheeyeo.uk/machine-learning/deep-learning/computer-vision/tensorflow/2021/11/03/using-tensorflow-object-detection-api/
 
+[m1l0/tfod tooklit]: https://github.com/m1l0ai/m1l0-tfod
+
 
 Apply fine-tuning to a trained Faster-RCNN object detection model via the TFOD API.
 
@@ -42,7 +44,7 @@ We use the [Faster R-CNN Resnet101 V1 model] for this example.
 
 Below describes the steps I took to train the [LISA Traffic signs dataset] using TFOD API.
 
-* Clone the m1l0/tfod tooklit and use it as the base working directory.
+* Clone the [m1l0/tfod tooklit] and use it as a base working directory.
 
 * Clone the TFOD models zoo into base working directory as **models** and run the following:
 
