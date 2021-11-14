@@ -40,11 +40,11 @@ We use the [Faster R-CNN Resnet101 V1 model] for this example.
 
 ### Local Setup and training process
 
-* Download the [LISA Traffic signs dataset] into this working dir as 'lisa'. Create a subdir of 'records' and 'experiments'
+Below describes the steps I took to train the [LISA Traffic signs dataset] using TFOD API.
 
-* Run `python build_lisa_records.py` which will output the training/test records and a labels mapping file to 'records' subdir. We need this during training phase.
+* Clone the m1l0/tfod tooklit and use it as the base working directory.
 
-* Clone the TFOD models zoo into local working dir of this repo and run the following:
+* Clone the TFOD models zoo into base working directory as **models** and run the following:
 
 ```
 git clone https://github.com/tensorflow/models.git
@@ -61,13 +61,25 @@ python -m pip install .
 python object_detection/builders/model_builder_tf2_test.py
 ```
 
-* If there are errors with the running of the test script, resolve them first before moving on to the steps below.
+* If there are errors with the test script, resolve them first before moving on to the steps below.
 
-* Create a training directory for the model's checkpoints files during training and to load the pre-trained model's weights. 
+* Download the [LISA Traffic signs dataset] into this working dir as **lisa**. Create the following subdirs: **lisa/records**; **lisa/experiments**; **lisa/experiments/exported_model**; **lisa/experiments/training**
 
-```
-mkdir -p lisa/experiments/training
-```
+
+* Run `python build_lisa_records.py` which will output the following files:
+
+  * **lisa/records/training.record**
+
+    The training dataset
+
+  * **lisa/records/testing.record**
+
+    The test dataset
+
+  * **lisa/records/classes.pbtxt**
+
+    Mapping of target class labels to integer values
+
 
 * Run `train.sh` with the following parameters:
 
@@ -96,8 +108,32 @@ mkdir -p lisa/experiments/training
   <batch_size> => Batch size; must match num of gpus
   <num_of_test_samples> => Number of test samples for evaluation
 
+  Invoking `train.sh` will:
 
-### Results of initial run on AWS
+  * Download the required pretrained model as specified via `pretrained_model_name`, extract and save it to the training subdir
+
+  * Sets ENV vars and run `python readconfig.py` which copies the sample pipeline config file from pretrained model dir, and creates a new pipeline config file based on the additional parameters defined above i.e. <num_classes>, <min_dim>, <max_dim>, <num_steps>, <batch_size>, <num_of_test_samples>
+
+  * Starts the training process and logs output to STDOUT, saves model checkpoints to **lisa/experiments/training**
+
+  * Runs evaluation after training completes
+
+  * Saves the final trained model to **lisa/experiments/exported_model**
+
+
+### Run on AWS
+
+* Before training on AWS, you need to create a TFOD docker image by building the dockerfile in the m1l0/tfod project.
+
+* To train on AWS, a set of terraform scripts are provided in the `terraform folder`. Adjust `terraform/config.tfvars` and then run `make setup` followed by `make apply`
+
+* After the resources are provisioned, run `make runtask` which will create an ECS task and tails the training logs.
+
+* The model artifacts will be saved into the S3 buckets specified in `terraform/config.tfvars`
+
+
+
+### Results of initial run
 
 For the purposes of evaluating the Faster-RCNN model on the [LISA Traffic signs dataset], the model was packaged as a docker image and trained on a single p3.2xlarge instance with 1 GPU, 16GB GPU RAM.
 
@@ -109,6 +145,8 @@ Training config:
 * max_dim: 1024
 * num_classes: 3
 * batch_size: 1
+* optimizer: SGD
+* learning rate: 0.01
 
 The rest of the config are kept as it is from the sample config file provided by the pre-trained model.
 
@@ -172,4 +210,16 @@ The evaluation results are as follows:
 2021-11-12T21:46:48 I1112 21:46:48.713370 139908352481088 model_lib_v2.py:1010]   + Loss/total_loss: 0.245106
 ```
 
-The overall loss is =~ 0.24 which is high. This may be due to the high learning rate. The mAP@0.5 is 0.731.
+The overall loss is =~ 0.24 which is high. The mAP@0.5 is 0.731.
+
+We will use the above as a baseline model.
+
+
+### Further extensions
+
+#### Update the default optimizer
+
+Update the optimizer in the config file to use a lower learning rate without any decay i.e. set the config to manual_learning_rate
+
+
+TODO
