@@ -38,13 +38,13 @@ Notes on the pre-trained models:
 We use the [Faster R-CNN Resnet101 V1 model] for this example.
 
 
-### Setup
+### Local Setup and training process
 
-* Download the [LISA Traffic signs dataset] into this working dir as 'lisa'. Create a subdir of 'records' and 'experiments'
+Below describes the steps I took to train the [LISA Traffic signs dataset] using TFOD API.
 
-* Run `python build_lisa_records.py` which will output the training/test records and a labels mapping file to 'records' subdir. We need this during training phase.
+* Clone the m1l0/tfod tooklit and use it as the base working directory.
 
-* Clone the TFOD models zoo into local working dir of this repo and run the following:
+* Clone the TFOD models zoo into base working directory as **models** and run the following:
 
 ```
 git clone https://github.com/tensorflow/models.git
@@ -55,105 +55,171 @@ protoc object_detection/protos/*.proto --python_out=.
 
 cp object_detection/packages/tf2/setup.py .
 
-# Need to change dependency in setup.py to use 'tf-models-official==2.4.0'
-
 python -m pip install .
-
-# reinstall TF 2.4.0 as above would have installed TF 2.6.1
-pip install --upgrade --force-reinstall tensorflow==2.4.0
 
 # if no errors then it works...
 python object_detection/builders/model_builder_tf2_test.py
 ```
 
-* If there are errors with the running of the test script, resolve them first before moving on to the next step below.
+* If there are errors with the test script, resolve them first before moving on to the steps below.
 
-* Create a training directory for the model's checkpoints files during training and to load the pre-trained model's weights. 
+* Download the [LISA Traffic signs dataset] into this working dir as **lisa**. Create the following subdirs: **lisa/records**; **lisa/experiments**; **lisa/experiments/exported_model**; **lisa/experiments/training**
 
+
+* Run `python build_lisa_records.py` which will output the following files:
+
+  * **lisa/records/training.record**
+
+    The training dataset
+
+  * **lisa/records/testing.record**
+
+    The test dataset
+
+  * **lisa/records/classes.pbtxt**
+
+    Mapping of target class labels to integer values
+
+
+* Run `train.sh` with the following parameters:
+
+  ```
+  ./train.sh models \
+  lisa/experiments/training \
+  lisa/experiments/exported_model \
+  lisa/records \
+  "Faster R-CNN ResNet101 V1 800x1333" \
+  <num_classes> \
+  <min_dim> \
+  <max_dim> \
+  <num_steps> \
+  <batch_size> \
+  <num_test_examples>
+  ```
+
+  <models> => Directory of tfod models clone
+  <model_dir> => Directory where training artifacts stored
+  <exported_model_dir> => Directory to where exported model artifacts stored
+  <pretrained_model_name> => Pretrained model name e.g. "Faster R-CNN ResNet101 V1 800x1333"
+  <num_classes> => Number of labels / categories in config file
+  <min_dim> => Min dim in config file
+  <max_dim> => Max dim in config file
+  <num_steps> => Num of training steps
+  <batch_size> => Batch size; must match num of gpus
+  <num_of_test_samples> => Number of test samples for evaluation
+
+  Invoking `train.sh` will:
+
+  * Download the required pretrained model as specified via `pretrained_model_name`, extract and save it to the training subdir
+
+  * Sets ENV vars and run `python readconfig.py` which copies the sample pipeline config file from pretrained model dir, and creates a new pipeline config file based on the additional parameters defined above i.e. <num_classes>, <min_dim>, <max_dim>, <num_steps>, <batch_size>, <num_of_test_samples>
+
+  * Starts the training process and logs output to STDOUT, saves model checkpoints to **lisa/experiments/training**
+
+  * Runs evaluation after training completes
+
+  * Saves the final trained model to **lisa/experiments/exported_model**
+
+
+### Run on AWS
+
+* Before training on AWS, you need to create a TFOD docker image by building the dockerfile in the m1l0/tfod project.
+
+* To train on AWS, a set of terraform scripts are provided in the `terraform folder`. Adjust `terraform/config.tfvars` and then run `make setup` followed by `make apply`
+
+* After the resources are provisioned, run `make runtask` which will create an ECS task and tails the training logs.
+
+* The model artifacts will be saved into the S3 buckets specified in `terraform/config.tfvars`
+
+
+
+### Results of initial run
+
+For the purposes of evaluating the Faster-RCNN model on the [LISA Traffic signs dataset], the model was packaged as a docker image and trained on a single p3.2xlarge instance with 1 GPU, 16GB GPU RAM.
+
+The overall training time took approximately 2 hours.
+
+Training config:
+* num_steps: 50000
+* min_dim: 600
+* max_dim: 1024
+* num_classes: 3
+* batch_size: 1
+* optimizer: SGD
+* learning rate: 0.01
+
+The rest of the config are kept as it is from the sample config file provided by the pre-trained model.
+
+The SGD optimizer is used with a momentum of **0.9**. 
+
+The learning rate is set to **0.01** with a cosine learning rate decay over the total number of training steps.
+
+The evaluation results are as follows:
 ```
-mkdir -p lisa/experiments/training
-
-curl -L -o faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz http://download.tensorflow.org/models/object_detection/tf2/20200711/faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz
-
-
-tar -zxvf faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8.tar.gz
-
-# check that it has a checkpoint dir, saved_model dir, pipeline.config file
-ls -al faster_rcnn_resnet101_v1_800x1333_coco17_gpu-8
-
-# cp the pipeline.config file into lisa/experiments/training, rename it
+2021-11-12T21:46:47 Accumulating evaluation results...
+2021-11-12T21:46:48 DONE (t=0.84s).
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.248
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.731
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.101
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.123
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.348
+2021-11-12T21:46:48  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.654
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.301
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.340
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.364
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.287
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.421
+2021-11-12T21:46:48  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.692
+2021-11-12T21:46:48 INFO:tensorflow:Eval metrics at step 50000
+2021-11-12T21:46:48 I1112 21:46:48.684187 139908352481088 model_lib_v2.py:1007] Eval metrics at step 50000
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP: 0.247610
+2021-11-12T21:46:48 I1112 21:46:48.692481 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP: 0.247610
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP@.50IOU: 0.730677
+2021-11-12T21:46:48 I1112 21:46:48.693813 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP@.50IOU: 0.730677
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP@.75IOU: 0.100935
+2021-11-12T21:46:48 I1112 21:46:48.695106 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP@.75IOU: 0.100935
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP (small): 0.123162
+2021-11-12T21:46:48 I1112 21:46:48.696399 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP (small): 0.123162
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP (medium): 0.348016
+2021-11-12T21:46:48 I1112 21:46:48.697730 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP (medium): 0.348016
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Precision/mAP (large): 0.654373
+2021-11-12T21:46:48 I1112 21:46:48.699023 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP (large): 0.654373
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@1: 0.300572
+2021-11-12T21:46:48 I1112 21:46:48.700293 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@1: 0.300572
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@10: 0.339940
+2021-11-12T21:46:48 I1112 21:46:48.701619 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@10: 0.339940
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100: 0.363816
+2021-11-12T21:46:48 I1112 21:46:48.702923 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100: 0.363816
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100 (small): 0.286649
+2021-11-12T21:46:48 I1112 21:46:48.704222 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100 (small): 0.286649
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100 (medium): 0.420546
+2021-11-12T21:46:48 I1112 21:46:48.705553 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100 (medium): 0.420546
+2021-11-12T21:46:48 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100 (large): 0.691667
+2021-11-12T21:46:48 I1112 21:46:48.706911 139908352481088 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100 (large): 0.691667
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/RPNLoss/localization_loss: 0.003441
+2021-11-12T21:46:48 I1112 21:46:48.707967 139908352481088 model_lib_v2.py:1010]   + Loss/RPNLoss/localization_loss: 0.003441
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/RPNLoss/objectness_loss: 0.118597
+2021-11-12T21:46:48 I1112 21:46:48.709069 139908352481088 model_lib_v2.py:1010]   + Loss/RPNLoss/objectness_loss: 0.118597
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/BoxClassifierLoss/localization_loss: 0.064199
+2021-11-12T21:46:48 I1112 21:46:48.710147 139908352481088 model_lib_v2.py:1010]   + Loss/BoxClassifierLoss/localization_loss: 0.064199
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/BoxClassifierLoss/classification_loss: 0.058869
+2021-11-12T21:46:48 I1112 21:46:48.711216 139908352481088 model_lib_v2.py:1010]   + Loss/BoxClassifierLoss/classification_loss: 0.058869
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/regularization_loss: 0.000000
+2021-11-12T21:46:48 I1112 21:46:48.712285 139908352481088 model_lib_v2.py:1010]   + Loss/regularization_loss: 0.000000
+2021-11-12T21:46:48 INFO:tensorflow:  + Loss/total_loss: 0.245106
+2021-11-12T21:46:48 I1112 21:46:48.713370 139908352481088 model_lib_v2.py:1010]   + Loss/total_loss: 0.245106
 ```
 
-* Update the copied pipeline.config file as follows:
-```
-model {
-  faster_rcnn {
-    num_classes: 3
+The overall loss is =~ 0.24 which is high. The mAP@0.5 is 0.731.
 
-   }
-}
-...
-
-# set batch size to 1 but can be higher if you have compute
-# set num steps to 50000; min is 20000
-# set fine_tune_checkpoint to directory of 'checkpoint' in the downloaded model's weights; only use the prefix
-train_config: {
-  batch_size: 1
-  num_steps: 50000
-
-  ...
-  fine_tune_checkpoint_version: V2
-  fine_tune_checkpoint: "<location of model weights>/checkpoint/ckpt-0"
-  from_detection_checkpoint: true
-  fine_tune_checkpoint_type: "detection"
-}
-
-...
+We will use the above as a baseline model.
 
 
-train_input_reader: {
-  label_map_path: "<location of classes.pbtxt>"
-  tf_record_input_reader {
-    input_path: "<location of training.record>"
-  }
-}
+### Further extensions
+
+#### Update the default optimizer
+
+Update the optimizer in the config file to use a lower learning rate without any decay i.e. set the config to manual_learning_rate
 
 
-...
-
-# num_examples to match actual num of samples in test set
-eval_config: {
-  metrics_set: "coco_detection_metrics"
-  num_examples: 955
-}
-
-eval_input_reader: {
-  label_map_path: "<location of classes.pbtxt>"
-  shuffle: false
-  num_epochs: 1
-  tf_record_input_reader {
-    input_path: "<location of testing.record>"
-  }
-}
-
-```
-
-* Change back to current working dir of this project and run `source setup.sh <tfod_dir> <model_dir> <config_file>` where:
-
-	**tfod_dir**: Cloned models dir
-	**model_dir**: Dir where model's weights being extracted to
-	**config_file**: Name of config file within the model_dir.
-
-* Run `make train` which will start training process
-
-
-### Issues
-
-* If your TF version >= 2.4.0 it will throw a CUDNN mismatched error, in which case, downgrade the TF version. If not possible, create a dedicated venv and run the setup.py scripts again.
-
-
-### TODO:
-
-* Automate process of downloading model's and setting up dirs
-
-* Automate process of training model in cloud as it uses too much GPU resources locally
+TODO
