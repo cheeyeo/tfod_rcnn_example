@@ -28,6 +28,8 @@ setup:
 	terraform -chdir=terraform init
 
 apply:
+	terraform -chdir=terraform fmt
+	terraform -chdir=terraform validate
 	terraform -chdir=terraform plan -out=myplan -var-file=config.tfvars
 	terraform -chdir=terraform apply myplan
 

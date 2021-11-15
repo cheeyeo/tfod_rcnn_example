@@ -43,19 +43,48 @@ module "vpc" {
   enable_vpn_gateway = false
 }
 
-module "ssh_security_group" {
+/*
+module "tensorboard_security_group" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "3.18.0"
 
-  name        = "SSHDMZ"
-  description = "Security group that allows SSH access into VPC"
+  name        = "TBOARDDMZ"
+  description = "Security group that allows access into Tensorboard"
 
   vpc_id = module.vpc.vpc_id
 
   ingress_with_cidr_blocks = [
     {
-      from_port   = 22
-      to_port     = 22
+      from_port   = 6006
+      to_port     = 6006
+      protocol    = "http"
+      cidr_blocks = "0.0.0.0/0"
+    }
+  ]
+
+  egress_with_cidr_blocks = [
+    {
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = "0.0.0.0/0"
+    }
+  ]
+}
+*/
+
+# Create security group 
+module "tensorboard_private_vpc" {
+  source      = "terraform-aws-modules/security-group/aws"
+  version     = "3.18.0"
+  name        = "TFBOARD"
+  description = "Allow access to Tensorboard in private VPC"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress_with_cidr_blocks = [
+    {
+      from_port   = 6006
+      to_port     = 6006
       protocol    = "tcp"
       cidr_blocks = "0.0.0.0/0"
     }
@@ -72,52 +101,6 @@ module "ssh_security_group" {
 }
 
 
-# Create security group 
-module "ssh_private_vpc" {
-  source      = "terraform-aws-modules/security-group/aws"
-  name        = "PRIVATEVPCSSH"
-  description = "Allow SSH access into private VPC"
-  vpc_id      = module.vpc.vpc_id
-
-  computed_ingress_with_source_security_group_id = [
-    {
-      from_port                = 22
-      to_port                  = 22
-      protocol                 = "tcp"
-      source_security_group_id = module.ssh_security_group.this_security_group_id
-    }
-  ]
-
-  number_of_computed_ingress_with_source_security_group_id = 1
-
-  egress_with_cidr_blocks = [
-    {
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = "0.0.0.0/0"
-    }
-  ]
-}
-
-# Creates bastion host
-module "bastion_host" {
-  source = "./bastion"
-
-  instance_count = 1
-
-  instance_type = "t2.micro"
-
-  subnet_ids = module.vpc.public_subnets
-
-  security_group_ids = [module.ssh_security_group.this_security_group_id]
-
-  key_name = aws_key_pair.deployer.key_name
-
-  tags = {
-    Name = "bastion_host"
-  }
-}
 
 
 
@@ -157,6 +140,13 @@ resource "aws_iam_role_policy_attachment" "ecs_instance_ec2_instance_role" {
   role       = aws_iam_role.ecs_instance_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
 }
+
+# attach SSM instance policy
+resource "aws_iam_role_policy_attachment" "ecs_instance_ec2_ssm_role" {
+  role       = aws_iam_role.ecs_instance_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 
 # create ec2 instance profile
 resource "aws_iam_instance_profile" "ecs_instance_profile" {
@@ -308,6 +298,13 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         tostring(var.batch_size),
         tostring(var.num_examples)
       ],
+      "portMappings" : [
+        {
+          "containerPort" : 6006,
+          "hostPort" : 6006,
+          "protocol" : "http"
+        }
+      ],
       "logConfiguration" : {
         "logDriver" : "awslogs",
         "options" : {
@@ -343,7 +340,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "07156fbd-7d78-4801-b0df-0670300db638/training"
+          "value" : "2b4b06c4-408c-4ba9-9dda-2b4ec6271b01/training"
         },
         {
           "name" : "M1L0_REGION",
@@ -384,7 +381,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "07156fbd-7d78-4801-b0df-0670300db638/exported_model"
+          "value" : "2b4b06c4-408c-4ba9-9dda-2b4ec6271b01/exported_model"
         },
         {
           "name" : "M1L0_REGION",
@@ -426,13 +423,13 @@ resource "aws_instance" "ecs_instance" {
 
   monitoring = false
 
-  security_groups = [module.vpc.default_security_group_id, module.ssh_private_vpc.security_group_id]
+  security_groups = [module.vpc.default_security_group_id, module.tensorboard_private_vpc.this_security_group_id]
 
   /*
     NOTE: Need at least 3 private subnets as the p3 instances
     may not be available in specific AZ; use the index to switch between different private subnets in different AZs i.e. if no capacity available use module.vpc.private_subnets[1] rather than module.vpc.private_subnets[0]
   */
-  subnet_id = module.vpc.private_subnets[1]
+  subnet_id = module.vpc.private_subnets[0]
 
   root_block_device {
     volume_type = "gp3"
