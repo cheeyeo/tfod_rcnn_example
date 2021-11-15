@@ -204,6 +204,11 @@ python3 readconfig.py --num_classes=${num_classes} \
 		                  --batch_size=${batch_size} \
 		                  --num_examples=${num_examples}
 
+echo "Running Tensorboard in background..."
+tensorboard --logdir "${MODEL_DIR}" &
+TFBOARD_PID=$!
+
+
 echo "Starting training process..."
 python3 models/research/object_detection/model_main_tf2.py \
 	--pipeline_config_path="${PIPELINE_CONFIG_PATH}" \
@@ -227,3 +232,6 @@ python3 models/research/object_detection/exporter_main_v2.py \
 	--pipeline_config_path "${PIPELINE_CONFIG_PATH}" \
 	--trained_checkpoint_dir "${MODEL_DIR}" \
 	--output_directory "${EXPORTED_DIR}"
+
+
+kill -09 ${TFBOARD_PID}
