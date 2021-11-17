@@ -3,7 +3,7 @@
 build-docker:
 	docker build -t m1l0/tfod:latest -f Dockerfile .
 
-ecs-push: build-docker
+ecs-push:
 	aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ECR_TARGET}
 
 	docker tag m1l0/tfod:latest ${AWS_ECR_TARGET}/m1l0/tfod:latest

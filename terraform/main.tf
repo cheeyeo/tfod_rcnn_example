@@ -290,13 +290,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         "experiments/training",
         "experiments/exported_model",
         "${var.records_uri}",
-        "${var.pretrained_model}",
-        tostring(var.num_classes),
-        tostring(var.min_dim),
-        tostring(var.max_dim),
-        tostring(var.num_steps),
-        tostring(var.batch_size),
-        tostring(var.num_examples)
+        "${var.pretrained_model}"
       ],
       "portMappings" : [
         {

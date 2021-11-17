@@ -23,7 +23,7 @@ echo "CLUSTER NAME: ${cluster_name}"
 echo "TASK DEF: ${task_definition}"
 echo "LOG GROUP: ${log_group}"
 
-TASK_ARN=$(aws ecs run-task --cluster ${cluster_name} --task-definition ${task_definition} --profile ${profile} --region ${region} | jq -r '.tasks[].taskArn')
+TASK_ARN=$(aws ecs run-task --cluster ${cluster_name} --task-definition ${task_definition} --profile ${profile} --region ${region} --overrides '{"containerOverrides": [{"name": "tfod", "command": ["models", "experiments/training", "experiments/exported_model", "s3://tfod", "Faster R-CNN ResNet101 V1 800x1333", "s3://tfod/testconfig.config", "s3://tfod/testparams.json"]}]}' | jq -r '.tasks[].taskArn')
 
 echo "Watching task: ${TASK_ARN}"
 
@@ -57,3 +57,5 @@ echo "Task Last Status: ${last_status}"
 echo "Stop Code: ${stop_code}"
 echo "Stop Reason: ${stop_reason}"
 echo "Failures: ${failures[*]}"
+
+## aws ssm start-session --target i-05d314eb40fdc9bbb --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["6006"], "localPortNumber":["6006"]}'
