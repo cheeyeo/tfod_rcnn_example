@@ -36,6 +36,13 @@ while [[ $status == "PENDING" ]]; do
 	sleep 5
 done
 
+echo "Setting up port forwarding for Tensorboard..."
+instance_arn=$(aws ecs describe-tasks --tasks ${TASK_ARN} --cluster ${cluster_name} | jq -r '.tasks[0] | .containerInstanceArn')
+echo "Instance ARN: ${instance_arn}"
+aws ssm start-session --target ${instance_arn} --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["6006"], "localPortNumber":["6006"]}' &
+TFBOARD_PID=$!
+
+
 tfod_stream=$(aws --profile ${profile} --region ${region} logs describe-log-streams --log-group-name "${log_group}" | jq -r ."logStreams | .[-1].logStreamName")
 
 if [[ $status == "RUNNING" ]]; then
@@ -58,4 +65,4 @@ echo "Stop Code: ${stop_code}"
 echo "Stop Reason: ${stop_reason}"
 echo "Failures: ${failures[*]}"
 
-## aws ssm start-session --target i-05d314eb40fdc9bbb --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["6006"], "localPortNumber":["6006"]}'
+kill -09 ${TFBOARD_PID}
