@@ -43,35 +43,6 @@ module "vpc" {
   enable_vpn_gateway = false
 }
 
-/*
-module "tensorboard_security_group" {
-  source  = "terraform-aws-modules/security-group/aws"
-  version = "3.18.0"
-
-  name        = "TBOARDDMZ"
-  description = "Security group that allows access into Tensorboard"
-
-  vpc_id = module.vpc.vpc_id
-
-  ingress_with_cidr_blocks = [
-    {
-      from_port   = 6006
-      to_port     = 6006
-      protocol    = "http"
-      cidr_blocks = "0.0.0.0/0"
-    }
-  ]
-
-  egress_with_cidr_blocks = [
-    {
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = "0.0.0.0/0"
-    }
-  ]
-}
-*/
 
 # Create security group 
 module "tensorboard_private_vpc" {
@@ -99,9 +70,6 @@ module "tensorboard_private_vpc" {
     }
   ]
 }
-
-
-
 
 
 # Creates ECS Cluster
@@ -288,9 +256,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
       "command" : [
         "models",
         "experiments/training",
-        "experiments/exported_model",
-        "${var.records_uri}",
-        "${var.pretrained_model}"
+        "experiments/exported_model"
       ],
       "portMappings" : [
         {
@@ -330,11 +296,11 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_FAMILY",
-          "value" : "object-detector"
+          "value" : "${var.project_name}"
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "2b4b06c4-408c-4ba9-9dda-2b4ec6271b01/training"
+          "value" : "${var.project_id}"
         },
         {
           "name" : "M1L0_REGION",
@@ -371,11 +337,11 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_FAMILY",
-          "value" : "object-detector"
+          "value" : "${var.project_name}"
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "2b4b06c4-408c-4ba9-9dda-2b4ec6271b01/exported_model"
+          "value" : "${var.project_id}"
         },
         {
           "name" : "M1L0_REGION",
@@ -423,7 +389,7 @@ resource "aws_instance" "ecs_instance" {
     NOTE: Need at least 3 private subnets as the p3 instances
     may not be available in specific AZ; use the index to switch between different private subnets in different AZs i.e. if no capacity available use module.vpc.private_subnets[1] rather than module.vpc.private_subnets[0]
   */
-  subnet_id = module.vpc.private_subnets[0]
+  subnet_id = module.vpc.private_subnets[var.subnet_id]
 
   root_block_device {
     volume_type = "gp3"

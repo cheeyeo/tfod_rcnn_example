@@ -216,7 +216,6 @@ python3 readconfig.py --override=${model_config} \
 
 echo "Running Tensorboard in background..."
 tensorboard --logdir "${MODEL_DIR}" --port 6006 --host 0.0.0.0 &
-#tensorboard --logdir "${MODEL_DIR}" &
 TFBOARD_PID=$!
 
 echo "Starting training process..."

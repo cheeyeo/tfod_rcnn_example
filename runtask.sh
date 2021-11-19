@@ -3,12 +3,20 @@
 set -x
 
 # Script for running one off ECS task via aws cli and jq
-config_file=$1
+# Usage: runtask <tf output config file> <s3_records_source> <pretrain_model_name> <s3_model_config> <s3_hparams_config>
+# E.g. runtask config.json s3://tfod "Faster R-CNN ResNet101 V1 800x1333" s3://tfod/testconfig.config s3://tfod/testparams.json
 
-if [[ ! -f ${config_file} ]]; then
-	echo "Config file does not exist!"
+if [[ $# -ne 5 ]]; then
+	echo "Invalid invocation!"
+	echo "Usage: $0 <tf output config file> <s3_records_source> <pretrain_model_name> <s3_model_config> <s3_hparams_config>"
 	exit 1
 fi
+
+config_file=$1
+records_source=$2
+pretrained_model_name=$3
+custom_model_config=$4
+custom_model_hparams=$5
 
 # Parse config file using jq
 profile=$(cat ${config_file} | jq -r '.profile.value')
@@ -23,7 +31,14 @@ echo "CLUSTER NAME: ${cluster_name}"
 echo "TASK DEF: ${task_definition}"
 echo "LOG GROUP: ${log_group}"
 
-TASK_ARN=$(aws ecs run-task --cluster ${cluster_name} --task-definition ${task_definition} --profile ${profile} --region ${region} --overrides '{"containerOverrides": [{"name": "tfod", "command": ["models", "experiments/training", "experiments/exported_model", "s3://tfod", "Faster R-CNN ResNet101 V1 800x1333", "s3://tfod/testconfig.config", "s3://tfod/testparams.json"]}]}' | jq -r '.tasks[].taskArn')
+overrides=$(jq -n \
+	            --arg rs "${records_source}" \
+	            --arg pmn "${pretrained_model_name}" \
+	            --arg cmc "${custom_model_config}" \
+	            --arg cmhp "${custom_model_hparams}" \
+	            '{containerOverrides: [{"name": "tfod", "command": ["models", "experiments/training", "experiments/exported_model", $rs, $pmn, $cmc, $cmhp]}]}')
+
+TASK_ARN=$(aws ecs run-task --cluster ${cluster_name} --task-definition ${task_definition} --profile ${profile} --region ${region} --overrides "${overrides}" | jq -r '.tasks[].taskArn')
 
 echo "Watching task: ${TASK_ARN}"
 
@@ -36,16 +51,15 @@ while [[ $status == "PENDING" ]]; do
 	sleep 5
 done
 
-echo "Setting up port forwarding for Tensorboard..."
-instance_arn=$(aws ecs describe-tasks --tasks ${TASK_ARN} --cluster ${cluster_name} | jq -r '.tasks[0] | .containerInstanceArn')
-echo "Instance ARN: ${instance_arn}"
-aws ssm start-session --target ${instance_arn} --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["6006"], "localPortNumber":["6006"]}' &
-TFBOARD_PID=$!
-
-
 tfod_stream=$(aws --profile ${profile} --region ${region} logs describe-log-streams --log-group-name "${log_group}" | jq -r ."logStreams | .[-1].logStreamName")
 
 if [[ $status == "RUNNING" ]]; then
+	echo "Setting up port forwarding for Tensorboard..."
+	instance_arn=$(aws ecs describe-tasks --tasks ${TASK_ARN} --cluster ${cluster_name} | jq -r '.tasks[0] | .containerInstanceArn')
+  echo "Local port binding to Instance ARN: ${instance_arn}"
+  aws ssm start-session --target ${instance_arn} --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["6006"], "localPortNumber":["6006"]}' &
+  TFBOARD_PID=$!
+
 	echo "Task is running"
 	echo "Tailing log..."
 
