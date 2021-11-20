@@ -300,7 +300,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "${var.project_id}"
+          "value" : "${var.project_id}/training"
         },
         {
           "name" : "M1L0_REGION",
@@ -341,7 +341,7 @@ resource "aws_ecs_task_definition" "tfod_task_definition" {
         },
         {
           "name" : "M1L0_JOBID",
-          "value" : "${var.project_id}"
+          "value" : "${var.project_id}/exported_model"
         },
         {
           "name" : "M1L0_REGION",

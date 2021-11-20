@@ -59,17 +59,21 @@ if __name__ == "__main__":
         with open(args["hparams"], "r") as f:
             hparams_dict.update(json.loads(f.read()))
 
-    # Update the hyperparameters using provided json file
+    # # Update the hyperparameters using provided json file
     updated_configs = config_util.merge_external_params_with_configs(updated_configs, kwargs_dict=hparams_dict)
 
     fine_tune_checkpoint = os.path.join(os.environ.get("PRETRAINED_MODEL_DIR"), "checkpoint", "ckpt-0")
     fine_tune_checkpoint_type = hparams_dict.get("fine_tune_checkpoint_type", "classification")
     num_examples = hparams_dict.get("num_examples", None)
+    batch_size = hparams_dict.get("batch_size", None)
 
     updated_configs["train_config"].fine_tune_checkpoint = fine_tune_checkpoint
     updated_configs["train_config"].fine_tune_checkpoint_type = fine_tune_checkpoint_type
     if num_examples is not None:
         updated_configs["eval_config"].num_examples = num_examples
+
+    if batch_size is not None:
+        updated_configs["eval_config"].batch_size = batch_size
 
     print("Updated config \n{}".format(updated_configs))
 

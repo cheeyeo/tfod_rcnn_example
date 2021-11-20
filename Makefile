@@ -1,4 +1,4 @@
-.PHONY: train local-run ecs-run setup apply teardown
+.PHONY: train local-run ecs-run setup apply teardown rutask-config
 
 build-docker:
 	docker build -t m1l0/tfod:latest -f Dockerfile .
@@ -36,6 +36,5 @@ apply:
 teardown:
 	terraform -chdir=terraform destroy -var-file=config.tfvars
 
-runtask:
+runtask-config:
 	terraform -chdir=terraform output -json > configs.json
-	./runtask.sh configs.json

@@ -57,7 +57,11 @@ if [[ $status == "RUNNING" ]]; then
 	echo "Setting up port forwarding for Tensorboard..."
 	instance_arn=$(aws ecs describe-tasks --tasks ${TASK_ARN} --cluster ${cluster_name} | jq -r '.tasks[0] | .containerInstanceArn')
   echo "Local port binding to Instance ARN: ${instance_arn}"
-  aws ssm start-session --target ${instance_arn} --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["6006"], "localPortNumber":["6006"]}' &
+  
+  container_id=$(aws ecs describe-container-instances --container-instances ${instance_arn} --cluster ${cluster_name} | jq -r '.containerInstances[0] | .ec2InstanceId')
+  echo "Setting up local port forwarding for ${container_id}"
+  
+  aws ssm start-session --target ${container_id} --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["6006"], "localPortNumber":["6006"]}' &
   TFBOARD_PID=$!
 
 	echo "Task is running"

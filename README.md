@@ -83,6 +83,35 @@ python object_detection/builders/model_builder_tf2_test.py
     Mapping of target class labels to integer values
 
 
+* Create a model config file to specify the model configuration. Refer to the provided template config provided by the model. The model config I used for this project is specified in `trainmodel.config` as follows:
+  ```
+    model {
+    faster_rcnn {
+      image_resizer {
+        keep_aspect_ratio_resizer {
+          min_dimension: 600
+          max_dimension: 1024
+          pad_to_max_dimension: false
+        }
+      }
+    }
+  }
+  ```
+
+  I overwrote the image resizer to resize images to min of 600px and max of 1024 px without zero padding.
+
+  Next, I created a `trainparams.json` file which defines the model's hyper params as follows:
+
+  ```
+  {
+    "num_classes": 3,
+    "batch_size": 1,
+    "train_steps": 50000,
+    "num_examples": 955,
+    "fine_tune_checkpoint_type": "detection"
+  }
+  ```
+
 * Run `train.sh` with the following parameters:
 
   ```
@@ -91,30 +120,15 @@ python object_detection/builders/model_builder_tf2_test.py
   lisa/experiments/exported_model \
   lisa/records \
   "Faster R-CNN ResNet101 V1 800x1333" \
-  <num_classes> \
-  <min_dim> \
-  <max_dim> \
-  <num_steps> \
-  <batch_size> \
-  <num_test_examples>
+  trainconfig.config \
+  trainparams.json
   ```
-
-  <models> => Directory of tfod models clone
-  <model_dir> => Directory where training artifacts stored
-  <exported_model_dir> => Directory to where exported model artifacts stored
-  <pretrained_model_name> => Pretrained model name e.g. "Faster R-CNN ResNet101 V1 800x1333"
-  <num_classes> => Number of labels / categories in config file
-  <min_dim> => Min dim in config file
-  <max_dim> => Max dim in config file
-  <num_steps> => Num of training steps
-  <batch_size> => Batch size; must match num of gpus
-  <num_of_test_samples> => Number of test samples for evaluation
 
   Invoking `train.sh` will:
 
   * Download the required pretrained model as specified via `pretrained_model_name`, extract and save it to the training subdir
 
-  * Sets ENV vars and run `python readconfig.py` which copies the sample pipeline config file from pretrained model dir, and creates a new pipeline config file based on the additional parameters defined above i.e. <num_classes>, <min_dim>, <max_dim>, <num_steps>, <batch_size>, <num_of_test_samples>
+  * Sets ENV vars and run `python readconfig.py` which reads the model override file `trainconfig.config` and merges it into the default model config. It also parses the `trainparams.json` file and update the model's hparams in the config file.
 
   * Starts the training process and logs output to STDOUT, saves model checkpoints to **lisa/experiments/training**
 
@@ -129,10 +143,19 @@ python object_detection/builders/model_builder_tf2_test.py
 
 * To train on AWS, a set of terraform scripts are provided in the `terraform folder`. Adjust `terraform/config.tfvars` and then run `make setup` followed by `make apply`
 
-* After the resources are provisioned, run `make runtask` which will create an ECS task and tails the training logs.
+* After the resources are provisioned, run `make runtask-config` which generates a config.json file
+
+* Run `./runtask.sh` to start ECS task with the following parameters:
+  ```
+  ./runtask.sh configs.json s3://<records_bucket> "Faster R-CNN ResNet101 V1 800x1333" s3://<train config file> s3://<model hparams config file>
+  ```
+
+  The above will create and start an ECS task. It will map localport 6006 to the remote container TFBoard using port forwarding through SSM. 
+
+  It will also tail the training logs.
+
 
 * The model artifacts will be saved into the S3 buckets specified in `terraform/config.tfvars`
-
 
 
 ### Results of initial run
@@ -212,16 +235,67 @@ The evaluation results are as follows:
 2021-11-12T21:46:48 I1112 21:46:48.713370 139908352481088 model_lib_v2.py:1010]   + Loss/total_loss: 0.245106
 ```
 
-The overall loss is =~ 0.24 which is high. The mAP@0.5 is 0.731.
+The overall loss is =~ 0.24. The mAP@0.5 is 0.731.
 
 We will use the above as a baseline model.
 
 
 ### Further extensions
 
-#### Update the default optimizer
+#### Use lower learning rate
 
-Update the optimizer in the config file to use a lower learning rate without any decay i.e. set the config to manual_learning_rate
+Update the optimizer in the config file to use a lower learning rate with a manual decay.
+
+The `trainconfig.config` is updated and uploaded to S3:
+
+```
+model {
+  faster_rcnn {
+    image_resizer {
+      keep_aspect_ratio_resizer {
+        min_dimension: 600
+        max_dimension: 1024
+        pad_to_max_dimension: false
+      }
+    }
+  }
+}
+
+train_config: {
+  optimizer: {
+    momentum_optimizer: {
+      learning_rate: {
+        manual_step_learning_rate {
+          initial_learning_rate: 0.0003
+          schedule {
+            step: 900000
+            learning_rate: .00003
+          }
+          schedule {
+            step: 1200000
+            learning_rate: .000003
+          }
+        }
+      }
+      momentum_optimizer_value: 0.9
+    }
+    use_moving_average: false
+  }
+}
+```
+
+The learning rate is set to manual with an initial LR of 0.0003, set to decay to 3e-5 at 900000 step and 3e-6 at 1200000 step.
+
+The rest of the hparams are kept the same.
+
+The updated training config is:
+* num_steps: 50000
+* min_dim: 600
+* max_dim: 1024
+* num_classes: 3
+* batch_size: 1
+* optimizer: SGD
+* learning rate: 0.0003
 
 
-TODO
+# TODO Complete section on running results once I'm able to provision a single p3 instance for training !!!
