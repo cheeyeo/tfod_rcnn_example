@@ -180,5 +180,6 @@ lisa
 models
 NOTES.md
 *.json
+*.config
 testresults
 testexported_model

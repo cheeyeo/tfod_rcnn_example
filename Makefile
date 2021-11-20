@@ -1,9 +1,9 @@
-.PHONY: train local-run ecs-run setup apply teardown
+.PHONY: train local-run ecs-run setup apply teardown rutask-config
 
 build-docker:
 	docker build -t m1l0/tfod:latest -f Dockerfile .
 
-ecs-push: build-docker
+ecs-push:
 	aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ECR_TARGET}
 
 	docker tag m1l0/tfod:latest ${AWS_ECR_TARGET}/m1l0/tfod:latest
@@ -28,12 +28,13 @@ setup:
 	terraform -chdir=terraform init
 
 apply:
+	terraform -chdir=terraform fmt
+	terraform -chdir=terraform validate
 	terraform -chdir=terraform plan -out=myplan -var-file=config.tfvars
 	terraform -chdir=terraform apply myplan
 
 teardown:
 	terraform -chdir=terraform destroy -var-file=config.tfvars
 
-runtask:
+runtask-config:
 	terraform -chdir=terraform output -json > configs.json
-	./runtask.sh configs.json

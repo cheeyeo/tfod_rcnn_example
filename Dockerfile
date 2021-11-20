@@ -1,5 +1,15 @@
 ARG TENSORFLOW=2.6.0-gpu
 
+FROM ubuntu:18.04 as base
+
+RUN apt-get update && apt-get install -y \
+    git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/tensorflow/models.git
+
+
 FROM tensorflow/tensorflow:${TENSORFLOW} as builder
 
 SHELL ["/bin/bash", "-c"]
@@ -12,7 +22,7 @@ ENV TZ=Europe/Moscow \
     PYTHONIOENCODING=UTF-8
 
 RUN apt-get update && apt-get install -y \
-    git \
+    jq \
     protobuf-compiler \
     curl \
     wget \
@@ -33,8 +43,9 @@ COPY train.sh readfifo.py readconfig.py ./
 RUN chmod +x train.sh && \
     mkdir -p records experiments/evaluation experiments/exported_model experiments/training
 
-RUN git clone https://github.com/tensorflow/models.git && \
-    cd models/research/ && \
+COPY --from=base /models ./models
+
+RUN cd models/research/ && \
     protoc object_detection/protos/*.proto --python_out=. && \
     cp object_detection/packages/tf2/setup.py . && \
     python3 -m pip install --upgrade pip setuptools wheel && \
