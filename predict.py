@@ -111,5 +111,5 @@ if __name__ == "__main__":
 
         # cv2.imshow("Output", image_copy)
         # cv2.waitKey(0)
-        saved_path = os.path.join("testresults", "{}{}.png".format(args["output_file_prefix"], idx+1))
+        saved_path = os.path.join(args["output_dir"], "{}{}.png".format(args["output_file_prefix"], idx+1))
         cv2.imwrite(saved_path, image_copy)

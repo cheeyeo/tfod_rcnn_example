@@ -286,7 +286,7 @@ train_config: {
 
 The learning rate is set to manual with an initial LR of 0.0003, set to decay to 3e-5 at 900000 step and 3e-6 at 1200000 step.
 
-The rest of the hparams are kept the same.
+The rest of the hyper-params are kept the same.
 
 The updated training config is:
 * num_steps: 50000
@@ -297,5 +297,64 @@ The updated training config is:
 * optimizer: SGD
 * learning rate: 0.0003
 
+The model is trained on a single p3.2x large instance.
 
-# TODO Complete section on running results once I'm able to provision a single p3 instance for training !!!
+The evaluation logs:
+```
+2021-11-21T18:42:28  Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.251
+2021-11-21T18:42:28  Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.753
+2021-11-21T18:42:28  Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.082
+2021-11-21T18:42:28  Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.136
+2021-11-21T18:42:28  Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.353
+2021-11-21T18:42:28  Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.717
+2021-11-21T18:42:28  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.315
+2021-11-21T18:42:28  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.426
+2021-11-21T18:42:28  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.446
+2021-11-21T18:42:28  Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.390
+2021-11-21T18:42:28  Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.487
+2021-11-21T18:42:28  Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.733
+2021-11-21T18:42:28 INFO:tensorflow:Eval metrics at step 50000
+2021-11-21T18:42:28 I1121 18:42:28.983076 139894748911424 model_lib_v2.py:1007] Eval metrics at step 50000
+2021-11-21T18:42:28 INFO:tensorflow:  + DetectionBoxes_Precision/mAP: 0.250570
+2021-11-21T18:42:28 I1121 18:42:28.991602 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP: 0.250570
+2021-11-21T18:42:28 INFO:tensorflow:  + DetectionBoxes_Precision/mAP@.50IOU: 0.752946
+2021-11-21T18:42:28 I1121 18:42:28.993084 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP@.50IOU: 0.752946
+2021-11-21T18:42:28 INFO:tensorflow:  + DetectionBoxes_Precision/mAP@.75IOU: 0.081963
+2021-11-21T18:42:28 I1121 18:42:28.994505 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP@.75IOU: 0.081963
+2021-11-21T18:42:28 INFO:tensorflow:  + DetectionBoxes_Precision/mAP (small): 0.136231
+2021-11-21T18:42:28 I1121 18:42:28.995945 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP (small): 0.136231
+2021-11-21T18:42:28 INFO:tensorflow:  + DetectionBoxes_Precision/mAP (medium): 0.352965
+2021-11-21T18:42:28 I1121 18:42:28.997365 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP (medium): 0.352965
+2021-11-21T18:42:28 INFO:tensorflow:  + DetectionBoxes_Precision/mAP (large): 0.717285
+2021-11-21T18:42:28 I1121 18:42:28.998785 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Precision/mAP (large): 0.717285
+2021-11-21T18:42:29 INFO:tensorflow:  + DetectionBoxes_Recall/AR@1: 0.314737
+2021-11-21T18:42:29 I1121 18:42:29.000242 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@1: 0.314737
+2021-11-21T18:42:29 INFO:tensorflow:  + DetectionBoxes_Recall/AR@10: 0.426350
+2021-11-21T18:42:29 I1121 18:42:29.001671 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@10: 0.426350
+2021-11-21T18:42:29 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100: 0.446151
+2021-11-21T18:42:29 I1121 18:42:29.003093 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100: 0.446151
+2021-11-21T18:42:29 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100 (small): 0.389959
+2021-11-21T18:42:29 I1121 18:42:29.004544 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100 (small): 0.389959
+2021-11-21T18:42:29 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100 (medium): 0.486582
+2021-11-21T18:42:29 I1121 18:42:29.005964 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100 (medium): 0.486582
+2021-11-21T18:42:29 INFO:tensorflow:  + DetectionBoxes_Recall/AR@100 (large): 0.733333
+2021-11-21T18:42:29 I1121 18:42:29.007421 139894748911424 model_lib_v2.py:1010]   + DetectionBoxes_Recall/AR@100 (large): 0.733333
+2021-11-21T18:42:29 INFO:tensorflow:  + Loss/RPNLoss/localization_loss: 0.004029
+2021-11-21T18:42:29 I1121 18:42:29.008592 139894748911424 model_lib_v2.py:1010]   + Loss/RPNLoss/localization_loss: 0.004029
+2021-11-21T18:42:29 INFO:tensorflow:  + Loss/RPNLoss/objectness_loss: 0.145245
+2021-11-21T18:42:29 I1121 18:42:29.009755 139894748911424 model_lib_v2.py:1010]   + Loss/RPNLoss/objectness_loss: 0.145245
+2021-11-21T18:42:29 INFO:tensorflow:  + Loss/BoxClassifierLoss/localization_loss: 0.062707
+2021-11-21T18:42:29 I1121 18:42:29.010904 139894748911424 model_lib_v2.py:1010]   + Loss/BoxClassifierLoss/localization_loss: 0.062707
+2021-11-21T18:42:29 INFO:tensorflow:  + Loss/BoxClassifierLoss/classification_loss: 0.063345
+2021-11-21T18:42:29 I1121 18:42:29.012088 139894748911424 model_lib_v2.py:1010]   + Loss/BoxClassifierLoss/classification_loss: 0.063345
+2021-11-21T18:42:29 INFO:tensorflow:  + Loss/regularization_loss: 0.000000
+2021-11-21T18:42:29 I1121 18:42:29.013239 139894748911424 model_lib_v2.py:1010]   + Loss/regularization_loss: 0.000000
+2021-11-21T18:42:29 INFO:tensorflow:  + Loss/total_loss: 0.275326
+2021-11-21T18:42:29 I1121 18:42:29.014387 139894748911424 model_lib_v2.py:1010]   + Loss/total_loss: 0.275326
+```
+
+The overall mAP value has improved slightly to 0.75 with an overall increase in loss to 0.27 which suggests overfitting
+
+However, running `runpredict.sh` to include some signs not previously trained has resulted in the detector not localizing them, unlike the previous run which identified them with confidence above 0.5.
+
+In summary, this model exhibits better accuracy by assigning lower confidence scores on signs its not previously trained on.
