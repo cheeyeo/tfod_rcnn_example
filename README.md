@@ -286,7 +286,7 @@ train_config: {
 
 The learning rate is set to manual with an initial LR of 0.0003, set to decay to 3e-5 at 900000 step and 3e-6 at 1200000 step.
 
-The rest of the hparams are kept the same.
+The rest of the hyper-params are kept the same.
 
 The updated training config is:
 * num_steps: 50000
@@ -358,4 +358,3 @@ The overall mAP value has improved slightly to 0.75 with an overall increase in 
 However, running `runpredict.sh` to include some signs not previously trained has resulted in the detector not localizing them, unlike the previous run which identified them with confidence above 0.5.
 
 In summary, this model exhibits better accuracy by assigning lower confidence scores on signs its not previously trained on.
-
